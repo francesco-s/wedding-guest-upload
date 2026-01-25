@@ -1,0 +1,11 @@
+[project]
+name = "wedding-guest-upload"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "qrcode[pil]>=8.2",
+    "streamlit>=1.53.0",
+    "streamlit-javascript>=0.1.5",
+]
