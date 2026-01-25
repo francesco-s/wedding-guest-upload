@@ -46,9 +46,7 @@ packaging==26.0
 pandas==2.3.3
     # via streamlit
 pillow==12.1.0
-    # via
-    #   qrcode
-    #   streamlit
+    # via streamlit
 protobuf==6.33.4
     # via streamlit
 pyarrow==23.0.0
@@ -59,8 +57,6 @@ python-dateutil==2.9.0.post0
     # via pandas
 pytz==2025.2
     # via pandas
-qrcode==8.2
-    # via wedding-guest-upload (pyproject.toml)
 referencing==0.37.0
     # via
     #   jsonschema
