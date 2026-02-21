@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💍 Salvatore e Maria - Galleria </title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --accent: #00897b;   /* smeraldo */
+            --accent2: #00695c;  /* smeraldo scuro */
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --surface2: #1e1e1e;
+            --border: #2a2a2a;
+            --text: #f0f0f0;
+            --muted: #666;
+            --radius: 14px;
+            --max-width: 900px;
+        }
+        body {
+            background-image: 
+            linear-gradient(rgba(0,0,0,0.80), rgba(0,0,0,0.80)),
+            url('https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&q=80&auto=format');
+            color: #f0f0f0;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+
+        /* ── Navbar ── */
+        .navbar {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(10,10,10,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .navbar-brand { font-weight: 700; font-size: 1em; }
+        .navbar-user { font-size: 0.85em; color: var(--muted); }
+        .btn-logout {
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--muted); padding: 6px 14px;
+            border-radius: 20px; cursor: pointer; font-size: 0.82em;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .btn-logout:hover { color: var(--text); border-color: #444; }
+
+        /* ── Page wrapper ── */
+        .page {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 24px 16px 80px;
+        }
+
+        /* ── Upload Card ── */
+        .upload-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            margin: 16px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(233,30,140,0.04);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute; inset: 0;
+            opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .drop-zone-icon { font-size: 2em; margin-bottom: 8px; }
+        .drop-zone-text { color: var(--muted); font-size: 0.9em; line-height: 1.5; }
+        .drop-zone-text strong { color: var(--text); }
+
+        /* Preview thumbnails */
+        .preview-strip {
+            display: flex; gap: 8px;
+            padding: 0 16px 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .preview-strip:empty { display: none; }
+        .preview-strip::-webkit-scrollbar { display: none; }
+        .preview-thumb {
+            flex-shrink: 0;
+            width: 64px; height: 64px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            background: var(--surface2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5em;
+            overflow: hidden;
+        }
+        .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Upload controls */
+        .upload-controls {
+            display: flex; gap: 10px; align-items: center;
+            padding: 12px 16px 16px;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .toggle-label {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer; font-size: 0.88em; color: var(--muted);
+            user-select: none;
+        }
+        .toggle-label input { display: none; }
+        .toggle-track {
+            width: 38px; height: 21px;
+            background: var(--border); border-radius: 11px;
+            position: relative; transition: background 0.2s; flex-shrink: 0;
+        }
+        .toggle-label input:checked + .toggle-track { background: var(--accent); }
+        .toggle-track::after {
+            content: ''; position: absolute;
+            width: 15px; height: 15px; background: white;
+            border-radius: 50%; top: 3px; left: 3px; transition: left 0.2s;
+        }
+        .toggle-label input:checked + .toggle-track::after { left: 20px; }
+        .btn-upload {
+            margin-left: auto;
+            padding: 10px 22px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none; border-radius: 24px; color: white;
+            font-weight: 600; font-size: 0.9em;
+            cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+        }
+        .btn-upload:hover { opacity: 0.88; }
+        .btn-upload:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Progress */
+        .progress-bar {
+            height: 3px; background: var(--border);
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            width: 0%; transition: width 0.4s;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex; gap: 6px;
+            margin-bottom: 16px;
+        }
+        .tab-btn {
+            flex: 1; padding: 10px 8px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--muted);
+            font-size: 0.88em; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--surface2);
+            border-color: #444; color: var(--text);
+        }
+
+        /* ── Gallery Grid ── */
+        .gallery-header {
+            display: flex; align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .gallery-header h3 { font-size: 0.95em; color: var(--muted); font-weight: 500; }
+        .gallery-count {
+            font-size: 0.8em; color: var(--muted);
+            background: var(--surface2); padding: 2px 10px;
+            border-radius: 10px;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 3px;
+        }
+        @media (max-width: 700px) {
+            .gallery-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .gallery-item {
+            aspect-ratio: 1;
+            overflow: hidden;
+            cursor: pointer;
+            border-radius: 4px;
+            position: relative;
+            background: var(--surface2);
+        }
+        .gallery-item img, .gallery-item video {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.25s;
+        }
+        .gallery-item:hover img,
+        .gallery-item:hover video { transform: scale(1.06); }
+        .gallery-item .author-badge {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.75));
+            color: white; font-size: 0.65em;
+            padding: 12px 5px 4px; line-height: 1.2;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .gallery-item:hover .author-badge { opacity: 1; }
+        .gallery-item .video-badge {
+            position: absolute; top: 5px; right: 5px;
+            background: rgba(0,0,0,0.6); border-radius: 4px;
+            padding: 2px 5px; font-size: 0.65em; color: white;
+        }
+
+        /* Empty / Loading */
+        .empty-state {
+            grid-column: 1 / -1;
+            padding: 48px 20px; text-align: center; color: var(--muted);
+        }
+        .empty-state .icon { font-size: 2.5em; margin-bottom: 12px; }
+        .empty-state p { font-size: 0.9em; }
+
+        /* ── Lightbox ── */
+        .lightbox {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.97); z-index: 9999;
+            align-items: center; justify-content: center;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox img, .lightbox video {
+            max-width: 92vw; max-height: 86vh; object-fit: contain;
+            border-radius: 4px;
+        }
+        .lb-close {
+            position: absolute; top: 16px; right: 16px;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255,255,255,0.1); border: none;
+            color: white; font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; z-index: 1;
+        }
+        .lb-close:hover { background: rgba(255,255,255,0.2); }
+        .lb-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 46px; height: 46px; border-radius: 50%;
+            background: rgba(255,255,255,0.1); border: none;
+            color: white; font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; z-index: 1;
+        }
+        .lb-nav:hover { background: rgba(255,255,255,0.2); }
+        .lb-nav:disabled { opacity: 0.2; cursor: default; }
+        .lb-prev { left: 14px; }
+        .lb-next { right: 14px; }
+        .lb-footer {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 32px 20px 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.85));
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .lb-info {
+            flex: 1; text-align: center; color: white;
+        }
+        .lb-counter { font-size: 0.8em; color: #999; }
+        .lb-author { font-size: 0.9em; font-weight: 600; margin-top: 2px; }
+        .lb-btn {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: white; padding: 8px 16px; border-radius: 20px;
+            font-size: 0.82em; cursor: pointer; text-decoration: none;
+            white-space: nowrap; transition: background 0.2s;
+        }
+        .lb-btn:hover { background: rgba(255,255,255,0.22); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1e1e1e; border: 1px solid #333; color: white;
+            padding: 12px 22px; border-radius: 24px; font-size: 0.9em;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            z-index: 9000; white-space: nowrap;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <span class="navbar-brand">Salvatore 💍 Maria</span>
+        <span class="navbar-user" id="username-display"></span>
+        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+    </nav>
+
+    <div class="page">
+
+        <!-- Upload Card -->
+        <div class="upload-card">
+            <!-- Progress bar at top -->
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <!-- Drop zone -->
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" multiple
+                    accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime">
+                <div class="drop-zone-icon">📸</div>
+                <div class="drop-zone-text">
+                    <strong>Clicca o trascina</strong> le foto qui<br>
+                    PNG, JPG, WebP, MP4, MOV
+                </div>
+            </div>
+
+            <!-- Preview strip -->
+            <div class="preview-strip" id="previewStrip"></div>
+
+            <!-- Controls -->
+            <div class="upload-controls">
+                <label class="toggle-label">
+                    <input type="checkbox" id="privateToggle">
+                    <div class="toggle-track"></div>
+                    Condividi solo per gli sposi
+                </label>
+                <button class="btn-upload" id="uploadBtn" disabled onclick="uploadFiles()">
+                    Carica
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-public" onclick="switchTab('public')">
+                🌍 Pubbliche
+            </button>
+            <button class="tab-btn" id="tab-private" onclick="switchTab('private')">
+                🔒 Le mie
+            </button>
+        </div>
+
+        <!-- Gallery header -->
+        <div class="gallery-header">
+            <h3 id="gallery-label">Momenti pubblici</h3>
+            <span class="gallery-count" id="gallery-count">0 foto</span>
+        </div>
+
+        <!-- Grid -->
+        <div class="gallery-grid" id="gallery-grid">
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>Caricamento...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <button class="lb-close" onclick="closeLightbox()">✕</button>
+        <button class="lb-nav lb-prev" id="lb-prev" onclick="navLightbox(-1)">&#10094;</button>
+        <div id="lb-media"></div>
+        <button class="lb-nav lb-next" id="lb-next" onclick="navLightbox(1)">&#10095;</button>
+        <div class="lb-footer">
+            <div class="lb-info">
+                <div class="lb-counter" id="lb-counter"></div>
+                <div class="lb-author" id="lb-author"></div>
+            </div>
+            <button class="lb-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+            <a class="lb-btn" id="lb-download" download>📥 Scarica</a>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/gallery.js"></script>
+    <script>
+        // Drag & drop events
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            document.getElementById('fileInput').dispatchEvent(new Event('change'));
+        });
+    </script>
+</body>
+</html>
