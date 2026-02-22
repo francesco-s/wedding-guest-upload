@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salvatore 💍 Maria</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>Salvatore 💍 Maria</h1>
+            <p>Inserisci il tuo nome e una password per condividere i tuoi momenti con noi!</p>
+            <div class="form-group">
+                <label for="username">Nome e cognome</label>
+                <input type="text" id="username" placeholder="Es. Mario Rossi" autocomplete="username">
+                <small>Ci serve per associare la foto al tuo profilo.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Inserisci una password" autocomplete="current-password">
+            <small>
+                Ti servirà per accedere alle tue foto private in futuro. 
+                Se dimentichi la password, potrai creare un nuovo profilo con un nome diverso e continuare a vedere tutte le foto pubbliche.
+            </small>            
+            </div>
+            
+            <button class="btn-primary" id="loginBtn" onclick="handleLogin()">
+                Entra
+            </button>
+            
+            <p class="error-msg" id="errorMsg"></p>
+        </div>
+    </div>
+
+    <script>
+        // If already logged in, redirect
+        if (localStorage.getItem('token')) {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            window.location.href = isAdmin ? '/admin' : '/gallery';
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('errorMsg');
+
+            if (!username || !password) {
+                err.textContent = 'Inserisci nome e password.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Accesso in corso...';
+            err.textContent = '';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    err.textContent = data.detail || 'Errore di accesso.';
+                    return;
+                }
+
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', data.username);
+                localStorage.setItem('is_admin', data.is_admin);
+
+                window.location.href = data.is_admin ? '/admin' : '/gallery';
+            } catch (e) {
+                err.textContent = 'Errore di connessione.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Entra';
+            }
+        }
+
+        // Enter key to submit
+        document.addEventListener('keypress', e => {
+            if (e.key === 'Enter') handleLogin();
+        });
+    </script>
+</body>
+</html>

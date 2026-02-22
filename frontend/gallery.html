@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💍 Galleria</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <span class="navbar-brand">Salvatore 💍 Maria</span>
+        <span class="navbar-user" id="username-display"></span>
+        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+    </nav>
+
+    <div class="page">
+
+        <!-- Upload Card -->
+        <div class="upload-card">
+            <!-- Progress bar at top -->
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <!-- Drop zone -->
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" multiple
+                    accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime">
+                <div class="drop-zone-icon">📸</div>
+                <div class="drop-zone-text">
+                    <strong>Clicca o trascina</strong> le foto qui<br>
+                    PNG, JPG, WebP, MP4, MOV
+                </div>
+            </div>
+
+            <!-- Preview strip -->
+            <div class="preview-strip" id="previewStrip"></div>
+
+            <!-- Controls -->
+            <div class="upload-controls">
+                <label class="toggle-label">
+                    <input type="checkbox" id="privateToggle">
+                    <div class="toggle-track"></div>
+                    Condividi solo per gli sposi
+                </label>
+                <button class="btn-upload" id="uploadBtn" disabled onclick="uploadFiles()">
+                    Carica
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-public" onclick="switchTab('public')">
+                🌍 Caricate da tutti gli invitati
+            </button>
+            <button class="tab-btn" id="tab-private" onclick="switchTab('private')">
+                🔒 Condivise solo con gli sposi
+            </button>
+        </div>
+
+        <!-- Gallery header -->
+        <div class="gallery-header">
+            <h3 id="gallery-label">Momenti pubblici</h3>
+            <span class="gallery-count" id="gallery-count">0 foto</span>
+        </div>
+
+        <!-- Grid -->
+        <div class="gallery-grid" id="gallery-grid">
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>Caricamento...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <button class="lb-close" onclick="closeLightbox()">✕</button>
+        <button class="lb-nav lb-prev" id="lb-prev" onclick="navLightbox(-1)">&#10094;</button>
+        <div id="lb-media"></div>
+        <button class="lb-nav lb-next" id="lb-next" onclick="navLightbox(1)">&#10095;</button>
+        <div class="lb-footer">
+            <div class="lb-info">
+                <div class="lb-counter" id="lb-counter"></div>
+                <div class="lb-author" id="lb-author"></div>
+            </div>
+            <button class="lb-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+            <a class="lb-btn" id="lb-download" download>📥 Scarica</a>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/gallery.js"></script>
+    <script>
+        // Drag & drop events
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            document.getElementById('fileInput').dispatchEvent(new Event('change'));
+        });
+    </script>
+</body>
+</html>

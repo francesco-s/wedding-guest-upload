@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕵️ Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <span class="navbar-brand">🕵️ Ciao Salvatore e Maria</span>
+        <span></span>
+        <button class="btn-logout" onclick="Auth.logout()">Esci</button>
+    </nav>
+
+    <div class="page">
+
+        <!-- Stats -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="value" id="stat-public">—</div>
+                <div class="label">Foto Pubbliche</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="stat-users">—</div>
+                <div class="label">Utenti</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="stat-private">—</div>
+                <div class="label">Foto Private</div>
+            </div>
+        </div>
+
+        <!-- Public Gallery -->
+        <div class="section-header">
+            <h2>🌍 Galleria Pubblica</h2>
+            <span class="section-badge" id="public-count">0</span>
+        </div>
+        <div class="admin-grid" id="admin-public-grid">
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>Caricamento...</p>
+            </div>
+        </div>
+
+        <!-- Private Folders -->
+        <div class="section-header">
+            <h2>🔒 Cartelle Private</h2>
+            <span class="section-badge" id="private-count">0</span>
+        </div>
+        <div id="private-folders">
+            <div class="empty-state">
+                <div class="icon">⏳</div>
+                <p>Caricamento...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <button class="lb-close" onclick="AdminGallery.closeLightbox()">✕</button>
+        <button class="lb-nav lb-prev" id="lb-prev" onclick="AdminGallery.nav(-1)">&#10094;</button>
+        <div id="lb-media"></div>
+        <button class="lb-nav lb-next" id="lb-next" onclick="AdminGallery.nav(1)">&#10095;</button>
+        <div class="lb-footer">
+            <div class="lb-info">
+                <div class="lb-counter" id="lb-counter"></div>
+                <div class="lb-author" id="lb-author"></div>
+            </div>
+            <button class="lb-btn" onclick="AdminGallery.toggleFullscreen()">⛶ Fullscreen</button>
+            <a class="lb-btn" id="lb-download" download>📥 Scarica</a>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

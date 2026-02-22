@@ -1,10 +1,15 @@
 [project]
 name = "wedding-guest-upload"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Wedding guest uploader"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aiofiles>=25.1.0",
+    "fastapi>=0.129.2",
+    "python-jose>=3.5.0",
+    "python-multipart>=0.0.22",
     "streamlit>=1.53.0",
     "streamlit-javascript>=0.1.5",
+    "uvicorn>=0.41.0",
 ]

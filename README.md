@@ -1,223 +1,217 @@
-# 💍 Wedding Guest Book
+# Wedding Guest Book
 
-A production-ready, mobile-friendly web application for wedding guests to upload and share photos/videos. Features secure authentication, and public/private galleries.
+A mobile-friendly web application for wedding guests to upload and share photos and videos.
+Built with FastAPI (backend) and plain HTML/CSS/JS (frontend).
 
 ---
 
-## ✨ Features
+## Features
 
 ### For Guests
-- **🔐 Auto-Registration**: First-time visitors create their account instantly with name + password
-- **📸 Photo/Video Upload**: Multi-file upload with drag-and-drop support
-- **🔒 Privacy Controls**: Choose "Public" (visible to all) or "Private" (only you & couple)
-- **🖼️ Built-in Gallery**: Images are displayed in an integrated gallery with:
-  - ⬅️ ➡️ Keyboard/button navigation
-  - 📥 Download button
-  - ⛶ Native fullscreen mode
-  - Author attribution on public photos
-- **📱 Mobile-First Design**: Responsive 3-column grid, touch-friendly controls
+- **Auto-Registration**: First-time visitors create an account instantly with name + password
+- **Photo/Video Upload**: Multi-file upload with drag-and-drop support and thumbnail preview
+- **Privacy Controls**: Each upload can be set as public (visible to all) or private (only the user and admin)
+- **Built-in Gallery**: Responsive grid with fullscreen lightbox, keyboard navigation, and download support
 
 ### For Administrators
-- **🕵️ Admin Dashboard**: Secure access to all content
-- **🌍 Public Gallery View**: See all public photos with author names
-- **🔒 Private Folders**: Browse private uploads grouped by user
-- **🎯 4-Column Grid**: Efficient overview for larger screens
-- **📊 Photo Statistics**: File counts per user/category
+- **Admin Dashboard**: Secure access to all content
+- **Public Gallery**: See all public photos with author attribution
+- **Private Folders**: Browse private uploads grouped by user with file counts
+- **Statistics**: Total public photos, registered users, and private uploads at a glance
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - [uv](https://github.com/astral-sh/uv)
 
-### Installation
+### Run locally
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/wedding-guest-book.git
-cd wedding-guest-book
-
-# Using uv
 uv sync
-uv run streamlit run app.py
+uv run uvicorn backend.main:app --reload --port 8000
 ```
 
-The app will open at `http://localhost:8501`
+Open `http://localhost:8000` in your browser.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
-wedding_app_project/
-├── app.py                    # Entry point (routing)
-├── config.py                 # Configuration settings
-├── auth.py                   # User authentication & DB
-├── components/
+wedding-guest-book/
+├── backend/
 │   ├── __init__.py
-│   └── lightbox.py          # Reusable lightbox component
-├── views/
-│   ├── __init__.py
-│   ├── admin_view.py        # Admin dashboard
-│   └── guest_view.py        # Guest interface
-├── utils/
-│   ├── __init__.py
-│   └── file_ops.py          # File operations
-├── data/                     # Auto-created on first run
+│   ├── main.py              # FastAPI entry point
+│   ├── config.py            # Paths, settings, constants
+│   ├── auth.py              # Authentication + JWT
+│   └── routers/
+│       ├── __init__.py
+│       ├── auth_router.py   # POST /api/auth/login
+│       ├── media_router.py  # GET/POST /api/media
+│       └── admin_router.py  # GET /api/admin/*
+├── frontend/
+│   ├── index.html           # Login page
+│   ├── gallery.html         # Guest interface
+│   ├── admin.html           # Admin dashboard
+│   ├── css/
+│   │   ├── style.css        # All shared styles
+│   │   └── bg.jpg           # Background image
+│   └── js/
+│       ├── auth.js          # Shared auth utilities
+│       ├── gallery.js       # Guest gallery logic
+│       └── admin.js         # Admin dashboard logic
+├── data/                    # Auto-created on first run
 │   ├── guests.db            # SQLite user database
 │   └── uploads/
 │       ├── public/          # Public photos
 │       └── private/         # Private folders per user
-├── pyproject.toml           # Project dependencies
+├── streamlit_legacy/        # Archived Streamlit version
+├── pyproject.toml
 └── README.md
 ```
 
 ---
 
-## 🎯 Usage Guide
+## Usage
 
-### For Wedding Guests
+### Guests
 
-1. **First Visit**:
-   - Open the app URL or scan the QR code
-   - Enter your name (e.g., "Mario")
-   - Choose a password
-   - Click "Entra nell'App" (Enter App)
+1. Open the app URL or scan the QR code at the venue
+2. Enter your name and choose a password (account is created automatically)
+3. Upload photos or videos — toggle "Private" to keep them visible only to you and the admin
+4. Browse the public gallery or your private album
+5. Click any photo to open the fullscreen viewer; use arrow keys or buttons to navigate
 
-2. **Upload Photos**:
-   - Click "📸 Carica Foto / Video"
-   - Select one or multiple files
-   - Toggle "🔒 Mantieni Privato" if you want photos private
-   - Click "Carica" (Upload)
+### Admin
 
-3. **View Gallery**:
-   - Switch between "Momenti Pubblici" (Public) and "Il Mio Album Privato" (Private)
-   - Click any photo to open fullscreen viewer
-   - Navigate with arrow keys or on-screen buttons
-   - Download photos with the 📥 button
-
-### For Administrators
-
-1. **Login**:
-   - Username: `admin`
-   - Password: `admin123` ⚠️ **Change this in production!**
-
-2. **View Public Gallery**:
-   - See all public photos with author names
-   - Use lightbox for fullscreen viewing
-
-3. **Inspect Private Folders**:
-   - Expand any user's folder
-   - Browse their private uploads
-   - Download or view fullscreen
+1. Login with username `admin` and password `admin123`
+   - Change this before going to production (see Security section)
+2. View all public photos with author names
+3. Open any user's private folder to browse their uploads
 
 ---
 
-## 🔒 Security
+## API Reference
 
-### Authentication
-- Passwords are hashed using **SHA-256** before storage
-- SQLite database stores only hashed credentials
-- Session-based authentication via Streamlit's `session_state`
+The full interactive API documentation is available at:
 
-### File Storage
-- Files are saved with UUID-based names to prevent overwrites
-- Author name is embedded in filename: `YYYYMMDD_HHMM_Author_UUID.ext`
-- Private folders are isolated per user: `data/uploads/private/Username/`
+```
+http://localhost:8000/docs
+```
 
-### Production Checklist
-- [ ] Change admin password in `auth.py`
-- [ ] Use environment variables for secrets
-- [ ] Enable HTTPS
-- [ ] Configure firewall rules
-- [ ] Set up automated backups for `data/` folder
+Main endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Login or register |
+| GET | `/api/media/public` | List public files |
+| GET | `/api/media/private` | List own private files |
+| POST | `/api/media/upload` | Upload files |
+| GET | `/api/admin/public` | Admin: all public files |
+| GET | `/api/admin/users` | Admin: list users |
+| GET | `/api/admin/private/{user}` | Admin: user's private files |
 
 ---
 
-## 🐳 Deployment
+## Security
 
-### Option 1: Docker (Recommended)
+- Passwords are hashed with SHA-256 before storage
+- Authentication uses JWT tokens (24h expiry)
+- Private folders are isolated per user on disk: `data/uploads/private/Username/`
+- Files are saved with UUID-based names to prevent overwrites and path traversal
+
+### Production checklist
+- [ ] Change admin password in `backend/auth.py`
+- [ ] Replace `SECRET_KEY` in `backend/auth.py` with a strong random value
+- [ ] Enable HTTPS (via reverse proxy or platform)
+- [ ] Set up automated backups for `data/`
+
+---
+
+## Deployment
+
+### Render (free, ephemeral storage — good for testing)
+
+Add a `render.yaml` to the root:
+
+```yaml
+services:
+  - type: web
+    name: wedding-guest-book
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+```
+
+Push to GitHub and connect the repo on [render.com](https://render.com).
+
+> Note: Render's free tier does not persist files between deploys. Uploaded photos will be lost on restart.
+
+### Docker
 
 ```dockerfile
 FROM python:3.11-slim
-
 WORKDIR /app
-
 COPY . .
-
-RUN pip install streamlit
-
-EXPOSE 8501
-
-CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
+RUN pip install fastapi uvicorn[standard] python-multipart python-jose[cryptography] aiofiles
+EXPOSE 8000
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ```bash
 docker build -t wedding-app .
-docker run -p 8501:8501 -v $(pwd)/data:/app/data wedding-app
+docker run -p 8000:8000 -v $(pwd)/data:/app/data wedding-app
 ```
 
-### Option 2: Streamlit Cloud
-
-1. Push code to GitHub
-2. Connect to [Streamlit Cloud](https://streamlit.io/cloud)
-3. **Important**: Add persistent volume for `data/` folder (use external database in production)
-
-### Option 3: VPS (DigitalOcean, Hetzner, etc.)
-
-```bash
-# On server
-git clone <your-repo>
-cd wedding-guest-book
-pip install streamlit
-nohup streamlit run app.py --server.port 8501 &
-```
-
-⚠️ **Storage Warning**: Streamlit Cloud's free tier does NOT persist files. For production, use:
-- AWS S3 for uploads
-- PostgreSQL for user database
+The `-v` flag is required to persist photos and the database across container restarts.
 
 ---
 
-## 🛠️ Configuration
+## Configuration
 
-Edit `config.py` to customize:
+Edit `backend/config.py` to customize the app:
 
 ```python
-APP_TITLE = "Wedding Guest Book"  # Change app name
-APP_ICON = "💍"                   # Change emoji
-ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.mp4', '.mov']
+APP_TITLE = "Libro degli Ospiti"
+APP_ICON = "💍"
+SECRET_KEY = "change-this-in-production"
+TOKEN_EXPIRE_MINUTES = 60 * 24   # JWT token lifetime
+ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.mp4', '.mov'}
+```
+
+To change the admin credentials, edit the `init_db()` function in `backend/auth.py`:
+
+```python
+admin_hash = hashlib.sha256("your-new-password".encode()).hexdigest()
 ```
 
 ---
 
-## 📱 QR Code Generation
+## QR Code
 
-To share the app at your wedding, generate a QR code:
+Generate a QR code to display at the venue:
 
 ```python
 import qrcode
 
-# Your app URL (local network or public)
-url = "http://192.168.1.100:8501"  # Replace with your IP/domain
-
-qr = qrcode.make(url)
+qr = qrcode.make("https://your-app-url.onrender.com")
 qr.save("wedding_qr.png")
 ```
 
-Print and display at the reception!
+Install with: `pip install qrcode[pil]`
 
 ---
 
-## 💡 Future Enhancements
+## Roadmap
 
-- [ ] Video thumbnails in gallery
-- [ ] Bulk download (ZIP all photos)
-- [ ] Email notifications when guests upload
-- [ ] Integration with cloud storage (S3, Google Drive)
-- [ ] Multi-language support (currently Italian UI)
-- [ ] Advanced filtering (by date, author, tags)
-- [ ] Wedding slideshow mode
-
+- [ ] Bulk download as ZIP
+- [ ] Video thumbnails
+- [ ] Slideshow / kiosk mode
+- [ ] Cloud storage backend (S3 / Cloudflare R2)
+- [ ] Email notification on upload
