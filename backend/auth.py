@@ -2,9 +2,9 @@ import sqlite3
 import hashlib
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from .config import DB_FILE, SECRET_KEY, ALGORITHM, TOKEN_EXPIRE_MINUTES
+from backend.config import DB_FILE, SECRET_KEY, ALGORITHM, TOKEN_EXPIRE_MINUTES
 
 bearer_scheme = HTTPBearer()
 
@@ -32,24 +32,45 @@ def _hash(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-def login_or_register(username: str, password: str) -> dict:
-    p_hash = _hash(password)
+def login_guest(username: str) -> dict:
+    """Login or auto-register a guest by name only, no password."""
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT password_hash, is_admin FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT is_admin FROM users WHERE username = ?", (username,))
         row = cursor.fetchone()
 
         if row:
-            stored_hash, is_admin = row
-            if stored_hash != p_hash:
-                raise HTTPException(status_code=401, detail="Password errata.")
-            return {"username": username, "is_admin": bool(is_admin)}
+            # Existing user — just return (no password check for guests)
+            return {"username": username, "is_admin": bool(row[0])}
         else:
+            # New user — auto-register
             conn.execute(
-                "INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 0)",
-                (username, p_hash)
+                "INSERT INTO users (username, password_hash, is_admin) VALUES (?, '', 0)",
+                (username,)
             )
             return {"username": username, "is_admin": False}
+
+
+def login_admin(username: str, password: str) -> dict:
+    """Login for admin — requires password."""
+    p_hash = _hash(password)
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT password_hash, is_admin FROM users WHERE username = ?", (username,)
+        )
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(status_code=401, detail="Utente non trovato.")
+
+        stored_hash, is_admin = row
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Accesso non autorizzato.")
+        if stored_hash != p_hash:
+            raise HTTPException(status_code=401, detail="Password errata.")
+
+        return {"username": username, "is_admin": True}
 
 
 def create_token(data: dict) -> str:
@@ -65,7 +86,9 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Token non valido.")
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+) -> dict:
     return decode_token(credentials.credentials)
 
 
