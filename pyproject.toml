@@ -1,7 +1,7 @@
 [project]
 name = "wedding-guest-upload"
 version = "0.2.0"
-description = "Add your description here"
+description = "Wedding guest uploader"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

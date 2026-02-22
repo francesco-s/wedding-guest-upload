@@ -139,9 +139,16 @@ function openLightbox(index) {
 }
 
 function closeLightbox() {
+    // Stop any playing video before closing
+    const video = document.querySelector('#lb-media video');
+    if (video) {
+        video.pause();
+        video.currentTime = 0;
+    }
     if (document.fullscreenElement) document.exitFullscreen();
     document.getElementById('lightbox').classList.remove('active');
 }
+
 
 function navLightbox(dir) {
     currentIndex = (currentIndex + dir + currentFiles.length) % currentFiles.length;

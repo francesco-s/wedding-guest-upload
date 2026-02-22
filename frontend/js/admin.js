@@ -16,9 +16,16 @@ const AdminGallery = {
     },
 
     closeLightbox() {
+        // Stop any playing video before closing
+        const video = document.querySelector('#lb-media video');
+        if (video) {
+            video.pause();
+            video.currentTime = 0;
+        }
         if (document.fullscreenElement) document.exitFullscreen();
         document.getElementById('lightbox').classList.remove('active');
     },
+
 
     nav(dir) {
         const len = this.currentFiles.length;
