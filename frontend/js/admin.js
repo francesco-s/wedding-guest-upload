@@ -1,13 +1,12 @@
-// Guard: only admins can access this page
 Auth.requireAdmin();
 
-// --- State ---
+// ── Lightbox ────────────────────────────────────────────────────────────────
+
 const AdminGallery = {
     currentFiles: [],
     currentIndex: 0,
-    fileStores: {}, // Stores files per grid section
+    fileStores: {},
 
-    // Open lightbox for a specific grid
     openFor(storeKey, index) {
         this.currentFiles = this.fileStores[storeKey];
         this.currentIndex = index;
@@ -16,16 +15,11 @@ const AdminGallery = {
     },
 
     closeLightbox() {
-        // Stop any playing video before closing
         const video = document.querySelector('#lb-media video');
-        if (video) {
-            video.pause();
-            video.currentTime = 0;
-        }
+        if (video) { video.pause(); video.currentTime = 0; }
         if (document.fullscreenElement) document.exitFullscreen();
         document.getElementById('lightbox').classList.remove('active');
     },
-
 
     nav(dir) {
         const len = this.currentFiles.length;
@@ -38,11 +32,9 @@ const AdminGallery = {
         const mediaEl = document.getElementById('lb-media');
 
         if (f.is_video) {
-            mediaEl.innerHTML = `<video src="${f.url}" controls autoplay
-                style="max-width:90vw;max-height:85vh;"></video>`;
+            mediaEl.innerHTML = `<video src="${f.url}" controls autoplay></video>`;
         } else {
-            mediaEl.innerHTML = `<img src="${f.url}" alt="${f.filename}"
-                style="max-width:90vw;max-height:85vh;object-fit:contain;">`;
+            mediaEl.innerHTML = `<img src="${f.url}" alt="${f.filename}">`;
         }
 
         document.getElementById('lb-counter').textContent =
@@ -51,7 +43,7 @@ const AdminGallery = {
             f.author ? `📸 ${f.author}` : '';
 
         const dl = document.getElementById('lb-download');
-        dl.href = f.url;
+        dl.href     = f.url;
         dl.download = f.filename;
 
         document.getElementById('lb-prev').disabled = this.currentIndex === 0;
@@ -66,114 +58,188 @@ const AdminGallery = {
     }
 };
 
-// Keyboard navigation
 document.addEventListener('keydown', e => {
     if (!document.getElementById('lightbox').classList.contains('active')) return;
-    if (e.key === 'Escape') AdminGallery.closeLightbox();
-    if (e.key === 'ArrowLeft') AdminGallery.nav(-1);
+    if (e.key === 'Escape')     AdminGallery.closeLightbox();
+    if (e.key === 'ArrowLeft')  AdminGallery.nav(-1);
     if (e.key === 'ArrowRight') AdminGallery.nav(1);
 });
 
-// --- Rendering helpers ---
+// ── Grid renderer ────────────────────────────────────────────────────────────
+
 function renderGrid(files, gridEl, storeKey) {
     AdminGallery.fileStores[storeKey] = files;
 
     if (!files.length) {
-        gridEl.innerHTML = '<div class="empty-folder">Nessuna foto.</div>';
+        gridEl.innerHTML = `
+            <div class="empty-folder">Nessun file.</div>`;
         return;
     }
 
     gridEl.innerHTML = files.map((f, i) => `
         <div class="gallery-item" onclick="AdminGallery.openFor('${storeKey}', ${i})">
             ${f.is_video
-                ? `<video src="${f.url}" preload="metadata"></video>`
-                : `<img src="${f.url}" loading="lazy" alt="${f.filename}">`
-            }
-            ${f.author ? `<div class="author">📸 ${f.author}</div>` : ''}
+                ? `<video src="${f.url}" muted preload="metadata"></video>
+                   <span class="video-badge">▶</span>`
+                : `<img src="${f.url}" alt="${f.filename}" loading="lazy">`}
+            ${f.author
+                ? `<div class="author-badge">${f.author}</div>`
+                : ''}
         </div>
     `).join('');
 }
 
-// --- Data Loading ---
-async function loadPublicGallery() {
-    const res = await fetch('/api/admin/public', { headers: Auth.authHeaders() });
-    const files = await res.json();
+// ── Stats ────────────────────────────────────────────────────────────────────
 
-    document.getElementById('stat-public').textContent = files.length;
-    document.getElementById('public-count').textContent = files.length;
-
-    const grid = document.getElementById('admin-public-grid');
-    if (!files.length) {
-        grid.innerHTML = '<div class="empty-folder">Nessuna foto pubblica ancora.</div>';
-        return;
+async function loadStats() {
+    try {
+        const res  = await fetch('/api/admin/stats', { headers: Auth.headers() });
+        const data = await res.json();
+        document.getElementById('stat-public').textContent  = data.public  ?? '—';
+        document.getElementById('stat-users').textContent   = data.users   ?? '—';
+        document.getElementById('stat-private').textContent = data.private ?? '—';
+    } catch (e) {
+        console.error('Stats error:', e);
     }
-
-    renderGrid(files, grid, 'public-all');
 }
+
+// ── Public gallery ────────────────────────────────────────────────────────────
+
+async function loadPublicGallery() {
+    const grid = document.getElementById('admin-public-grid');
+
+    try {
+        const res   = await fetch('/api/admin/public', { headers: Auth.headers() });
+        const files = await res.json();
+
+        document.getElementById('public-count').textContent = files.length;
+        renderGrid(files, grid, 'public');
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state"><p>Errore caricamento.</p></div>`;
+    }
+}
+
+// ── Private folders ───────────────────────────────────────────────────────────
 
 async function loadPrivateFolders() {
-    const usersRes = await fetch('/api/admin/users', { headers: Auth.authHeaders() });
-    const users = await usersRes.json();
-
-    document.getElementById('stat-users').textContent = users.length;
-    document.getElementById('private-count').textContent = users.length;
-
     const container = document.getElementById('private-folders');
 
-    if (!users.length) {
-        container.innerHTML = '<div class="loading-state">Nessun upload privato trovato.</div>';
-        return;
-    }
+    try {
+        // Returns: [{username, public_count, private_count, total}, ...]
+        const res   = await fetch('/api/admin/users', { headers: Auth.headers() });
+        const users = await res.json();
 
-    container.innerHTML = '';
-    let totalPrivate = 0;
+        // Only show users who have at least 1 private file
+        const usersWithPrivate = users.filter(u => u.private_count > 0);
 
-    for (const [idx, user] of users.entries()) {
-        const filesRes = await fetch(`/api/admin/private/${user}`, { headers: Auth.authHeaders() });
-        const files = await filesRes.json();
-        totalPrivate += files.length;
+        document.getElementById('private-count').textContent = usersWithPrivate.length;
 
-        const storeKey = `private-${idx}`;
-        const folderId = `folder-body-${idx}`;
-        const gridId = `folder-grid-${idx}`;
+        if (!usersWithPrivate.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🔒</div>
+                    <p>Nessuna cartella privata.</p>
+                </div>`;
+            return;
+        }
 
-        // Create folder accordion element
-        const folderEl = document.createElement('div');
-        folderEl.className = 'user-folder';
-        folderEl.innerHTML = `
-            <div class="user-folder-header" onclick="toggleFolder(this, '${folderId}')">
-                <div class="folder-info">
-                    <span>📂 ${user}</span>
-                    <span class="file-count">${files.length} file</span>
+        container.innerHTML = usersWithPrivate.map(u => `
+            <div class="user-folder">
+                <div class="user-folder-header" onclick="toggleFolder(this, '${u.username}')">
+                    <div class="folder-info">
+                        <span>📁</span>
+                        <span>${u.username}</span>
+                        <span class="file-count">${u.private_count} file</span>
+                    </div>
+                    <span class="chevron">▼</span>
                 </div>
-                <span class="chevron">▼</span>
+                <div class="user-folder-body" id="folder-${u.username}"></div>
             </div>
-            <div class="user-folder-body" id="${folderId}">
-                <div class="admin-grid" id="${gridId}"></div>
-            </div>
-        `;
+        `).join('');
 
-        container.appendChild(folderEl);
-
-        // Render grid inside the folder
-        const gridEl = document.getElementById(gridId);
-        renderGrid(files, gridEl, storeKey);
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><p>Errore caricamento.</p></div>`;
     }
-
-    document.getElementById('stat-private').textContent = totalPrivate;
 }
 
-function toggleFolder(headerEl, bodyId) {
-    headerEl.classList.toggle('open');
-    document.getElementById(bodyId).classList.toggle('open');
+// ── Toggle folder open/close ──────────────────────────────────────────────────
+
+async function toggleFolder(headerEl, username) {
+    const body = document.getElementById(`folder-${username}`);
+    const isOpen = body.classList.contains('open');
+
+    headerEl.classList.toggle('open', !isOpen);
+    body.classList.toggle('open', !isOpen);
+
+    // Load files only on first open
+    if (!isOpen && !body.dataset.loaded) {
+        body.innerHTML = `<div class="empty-folder">Caricamento...</div>`;
+
+        try {
+            const res   = await fetch(`/api/admin/private/${username}`, { headers: Auth.headers() });
+            const files = await res.json();
+
+            body.dataset.loaded = '1';
+
+            const gridEl = document.createElement('div');
+            gridEl.className = 'admin-grid';
+            body.innerHTML = '';
+            body.appendChild(gridEl);
+
+            renderGrid(files, gridEl, `private_${username}`);
+        } catch (e) {
+            body.innerHTML = `<div class="empty-folder">Errore caricamento.</div>`;
+        }
+    }
 }
 
-// --- Init ---
-async function init() {
-    await Promise.all([
-        loadPublicGallery(),
-        loadPrivateFolders()
-    ]);
-}
+// ── Swipe support ─────────────────────────────────────────────────────────────
 
-init();
+(function initSwipe() {
+    const lb = document.getElementById('lightbox');
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+
+    lb.addEventListener('touchstart', e => {
+        startX    = e.touches[0].clientX;
+        startY    = e.touches[0].clientY;
+        isDragging = true;
+    }, { passive: true });
+
+    lb.addEventListener('touchmove', e => {
+        if (!isDragging) return;
+        // Prevent vertical scroll while swiping horizontally
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > dy) e.preventDefault();
+    }, { passive: false });
+
+    lb.addEventListener('touchend', e => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+
+        // Ignore if mostly vertical (scroll intent)
+        if (Math.abs(dy) > Math.abs(dx)) return;
+
+        // Minimum swipe distance: 50px
+        if (Math.abs(dx) < 50) return;
+
+        if (dx < 0) {
+            // Swipe left → next
+            document.getElementById('lb-next').click();
+        } else {
+            // Swipe right → previous
+            document.getElementById('lb-prev').click();
+        }
+    }, { passive: true });
+})();
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+loadStats();
+loadPublicGallery();
+loadPrivateFolders();

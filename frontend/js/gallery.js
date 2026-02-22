@@ -191,3 +191,49 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') navLightbox(-1);
     if (e.key === 'ArrowRight') navLightbox(1);
 });
+
+// ── Swipe support ─────────────────────────────────────────────────────────────
+
+(function initSwipe() {
+    const lb = document.getElementById('lightbox');
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+
+    lb.addEventListener('touchstart', e => {
+        startX    = e.touches[0].clientX;
+        startY    = e.touches[0].clientY;
+        isDragging = true;
+    }, { passive: true });
+
+    lb.addEventListener('touchmove', e => {
+        if (!isDragging) return;
+        // Prevent vertical scroll while swiping horizontally
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > dy) e.preventDefault();
+    }, { passive: false });
+
+    lb.addEventListener('touchend', e => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+
+        // Ignore if mostly vertical (scroll intent)
+        if (Math.abs(dy) > Math.abs(dx)) return;
+
+        // Minimum swipe distance: 50px
+        if (Math.abs(dx) < 50) return;
+
+        if (dx < 0) {
+            // Swipe left → next
+            document.getElementById('lb-next').click();
+        } else {
+            // Swipe right → previous
+            document.getElementById('lb-prev').click();
+        }
+    }, { passive: true });
+})();
+

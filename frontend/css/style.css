@@ -489,6 +489,71 @@ body {
 .toast.show { opacity: 1; }
 
 /* ────────────────────────────────
+   ADMIN: USERS TABLE
+──────────────────────────────── */
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+.users-table th {
+    text-align: left;
+    padding: 10px 14px;
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 0.78em;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+.users-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.users-table tr:last-child td { border-bottom: none; }
+.users-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+@media (max-width: 540px) {
+    .users-table thead { display: none; }
+
+    .users-table tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+        gap: 8px;
+    }
+    .users-table tr:last-child { border-bottom: none; }
+
+    .users-table td:nth-child(1) {
+        width: 100%;
+        padding: 0;
+        border: none;
+    }
+    .users-table td:nth-child(2),
+    .users-table td:nth-child(3),
+    .users-table td:nth-child(4) {
+        padding: 0;
+        border: none;
+        font-size: 0.82em;
+        color: var(--muted);
+    }
+    .users-table td:nth-child(2)::before { content: "Pubbliche "; }
+    .users-table td:nth-child(3)::before { content: "Private "; }
+    .users-table td:nth-child(4)::before { content: "tot: "; }
+
+    .users-table td:nth-child(5) {
+        margin-left: auto;
+        padding: 0;
+        border: none;
+    }
+}
+
+/* ────────────────────────────────
    RESPONSIVE
 ──────────────────────────────── */
 @media (max-width: 480px) {
