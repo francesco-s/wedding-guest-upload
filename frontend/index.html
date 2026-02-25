@@ -3,79 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salvatore 💍 Maria</title>
+    <title>💍 Salvatore e Maria</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .auth-card { transition: opacity 0.2s, transform 0.2s; }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 0.85em;
+            cursor: pointer;
+            padding: 0;
+            margin-bottom: 20px;
+            transition: color 0.2s;
+        }
+        .back-btn:hover { color: var(--text); }
+    </style>
 </head>
 <body>
     <div class="auth-container">
-        <div class="auth-card">
+
+        <!-- Guest panel -->
+        <div class="auth-card" id="guest-card">
             <h1>Salvatore 💍 Maria</h1>
-            <p>Inserisci il tuo nome e una password per condividere i tuoi momenti con noi!</p>
+            <p>Inserisci il tuo nome per condividere foto e video con sposi e invitati</p>
             <div class="form-group">
-                <label for="username">Nome e cognome</label>
-                <input type="text" id="username" placeholder="Es. Mario Rossi" autocomplete="username">
-                <small>Ci serve per associare la foto al tuo profilo.</small>
+                <label>Come ti chiami?</label>
+                <input
+                    type="text"
+                    id="username"
+                    placeholder="es. Mario Rossi"
+                    autocomplete="name"
+                    autofocus
+                    maxlength="40"
+                >
             </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Inserisci una password" autocomplete="current-password">
-            <small>
-                Ti servirà per accedere alle tue foto private in futuro. 
-                Se dimentichi la password, potrai creare un nuovo profilo con un nome diverso e continuare a vedere tutte le foto pubbliche.
-            </small>            
-            </div>
-            
-            <button class="btn-primary" id="loginBtn" onclick="handleLogin()">
+            <button class="btn-primary" id="loginBtn" onclick="handleGuestLogin()">
                 Entra
             </button>
-            
+
             <p class="error-msg" id="errorMsg"></p>
+
+            <p style="text-align:center; margin-top: 32px;">
+                <a href="#" onclick="showAdmin()"
+                   style="font-size:0.75em; color:var(--muted); text-decoration:none;">
+                    Accesso amministratore
+                </a>
+            </p>
         </div>
+
+        <!-- Admin panel (replaces guest panel) -->
+        <div class="auth-card" id="admin-card" style="display:none;">
+
+            <button class="back-btn" onclick="showGuest()">
+                &#8592; Indietro
+            </button>
+
+            <p><strong>Accesso amministratore</strong></p>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="admin-username" value="admin" disabled>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="admin-password">
+            </div>
+
+            <button class="btn-primary" id="adminBtn" onclick="handleAdminLogin()">
+                Accedi
+            </button>
+
+            <p class="error-msg" id="adminErrorMsg"></p>
+        </div>
+
     </div>
 
     <script>
-        // If already logged in, redirect
         if (localStorage.getItem('token')) {
-            const isAdmin = localStorage.getItem('is_admin') === 'true';
-            window.location.href = isAdmin ? '/admin' : '/gallery';
+            window.location.href =
+                localStorage.getItem('is_admin') === 'true' ? '/admin' : '/gallery';
         }
 
-        async function handleLogin() {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            const btn = document.getElementById('loginBtn');
-            const err = document.getElementById('errorMsg');
+        function showAdmin() {
+            document.getElementById('guest-card').style.display = 'none';
+            document.getElementById('admin-card').style.display = 'block';
+            document.getElementById('admin-password').focus();
+        }
 
-            if (!username || !password) {
-                err.textContent = 'Inserisci nome e password.';
-                return;
-            }
+        function showGuest() {
+            document.getElementById('admin-card').style.display = 'none';
+            document.getElementById('guest-card').style.display = 'block';
+            document.getElementById('username').focus();
+        }
+
+        async function handleGuestLogin() {
+            const username = document.getElementById('username').value.trim();
+            const err = document.getElementById('errorMsg');
+            const btn = document.getElementById('loginBtn');
+
+            err.textContent = '';
+            if (!username) { err.textContent = 'Inserisci il tuo nome.'; return; }
 
             btn.disabled = true;
-            btn.textContent = 'Accesso in corso...';
-            err.textContent = '';
+            btn.textContent = 'Accesso...';
 
             try {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username })
                 });
-
                 const data = await res.json();
-
-                if (!res.ok) {
-                    err.textContent = data.detail || 'Errore di accesso.';
-                    return;
-                }
-
-                localStorage.setItem('token', data.access_token);
-                localStorage.setItem('username', data.username);
-                localStorage.setItem('is_admin', data.is_admin);
-
-                window.location.href = data.is_admin ? '/admin' : '/gallery';
-            } catch (e) {
+                if (!res.ok) { err.textContent = data.detail; return; }
+                saveAndRedirect(data);
+            } catch {
                 err.textContent = 'Errore di connessione.';
             } finally {
                 btn.disabled = false;
@@ -83,9 +130,46 @@
             }
         }
 
-        // Enter key to submit
+        async function handleAdminLogin() {
+            const username = document.getElementById('admin-username').value.trim();
+            const password = document.getElementById('admin-password').value;
+            const err = document.getElementById('adminErrorMsg');
+            const btn = document.getElementById('adminBtn');
+
+            err.textContent = '';
+            if (!password) { err.textContent = 'Inserisci la password.'; return; }
+
+            btn.disabled = true;
+            btn.textContent = 'Accesso...';
+
+            try {
+                const res = await fetch('/api/auth/admin-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (!res.ok) { err.textContent = data.detail; return; }
+                saveAndRedirect(data);
+            } catch {
+                err.textContent = 'Errore di connessione.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Accedi';
+            }
+        }
+
+        function saveAndRedirect(data) {
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('is_admin', data.is_admin);
+            window.location.href = data.is_admin ? '/admin' : '/gallery';
+        }
+
         document.addEventListener('keypress', e => {
-            if (e.key === 'Enter') handleLogin();
+            if (e.key !== 'Enter') return;
+            const adminVisible = document.getElementById('admin-card').style.display !== 'none';
+            adminVisible ? handleAdminLogin() : handleGuestLogin();
         });
     </script>
 </body>

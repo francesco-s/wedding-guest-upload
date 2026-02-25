@@ -3,14 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🕵️ Admin Dashboard</title>
+    <title>Admin Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* ── User table ── */
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        .users-table th {
+            text-align: left;
+            padding: 10px 14px;
+            color: var(--muted);
+            font-weight: 500;
+            font-size: 0.82em;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .users-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .users-table tr:last-child td { border-bottom: none; }
+        .users-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .username-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8em; font-weight: 700; color: white;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.78em;
+        }
+        .badge-public  { background: rgba(0,137,123,0.15); color: var(--accent); }
+        .badge-private { background: rgba(255,255,255,0.06); color: var(--muted); }
+        .badge-zero    { color: var(--muted); }
+
+        .btn-delete {
+            background: rgba(220,38,38,0.1);
+            border: 1px solid rgba(220,38,38,0.25);
+            color: #f87171;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .btn-delete:hover { background: rgba(220,38,38,0.25); }
+
+        /* ── Tabs nav ── */
+        .admin-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+        .admin-tab {
+            padding: 10px 18px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--muted);
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+            margin-bottom: -1px;
+        }
+        .admin-tab.active {
+            color: var(--text);
+            border-bottom-color: var(--accent);
+        }
+        .admin-panel { display: none; }
+        .admin-panel.active { display: block; }
+
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* Confirm modal */
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 8000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 24px;
+            max-width: 360px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-box h3 { margin-bottom: 10px; font-size: 1.05em; }
+        .modal-box p  { color: var(--muted); font-size: 0.88em; margin-bottom: 22px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-cancel {
+            padding: 9px 22px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.88em;
+        }
+        .btn-confirm-delete {
+            padding: 9px 22px;
+            background: rgba(220,38,38,0.15);
+            border: 1px solid rgba(220,38,38,0.4);
+            color: #f87171;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.88em;
+            transition: background 0.2s;
+        }
+        .btn-confirm-delete:hover { background: rgba(220,38,38,0.3); }
+    </style>
 </head>
 <body>
 
     <!-- Navbar -->
     <nav class="navbar">
-        <span class="navbar-brand">🕵️ Ciao Salvatore e Maria</span>
+        <span class="navbar-brand">Salvatore 💍 Maria</span>
         <span></span>
         <button class="btn-logout" onclick="Auth.logout()">Esci</button>
     </nav>
@@ -33,28 +173,72 @@
             </div>
         </div>
 
-        <!-- Public Gallery -->
-        <div class="section-header">
-            <h2>🌍 Galleria Pubblica</h2>
-            <span class="section-badge" id="public-count">0</span>
-        </div>
-        <div class="admin-grid" id="admin-public-grid">
-            <div class="empty-state">
-                <div class="icon">⏳</div>
-                <p>Caricamento...</p>
-            </div>
+        <!-- Tab nav -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="switchPanel('gallery')">
+                Galleria
+            </button>
+            <button class="admin-tab" onclick="switchPanel('users')">
+                Utenti
+            </button>
         </div>
 
-        <!-- Private Folders -->
-        <div class="section-header">
-            <h2>🔒 Cartelle Private</h2>
-            <span class="section-badge" id="private-count">0</span>
-        </div>
-        <div id="private-folders">
-            <div class="empty-state">
-                <div class="icon">⏳</div>
-                <p>Caricamento...</p>
+        <!-- Panel: Gallery -->
+        <div class="admin-panel active" id="panel-gallery">
+
+            <div class="section-header">
+                <h2>Momenti Pubblici</h2>
+                <span class="section-badge" id="public-count">0</span>
             </div>
+            <div class="admin-grid" id="admin-public-grid">
+                <div class="empty-state">
+                    <div class="icon">⏳</div>
+                    <p>Caricamento...</p>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top: 12px;">
+                <h2>Momenti Privati</h2>
+                <span class="section-badge" id="private-count">0</span>
+            </div>
+            <div id="private-folders">
+                <div class="empty-state">
+                    <div class="icon">⏳</div>
+                    <p>Caricamento...</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Panel: Users -->
+        <div class="admin-panel" id="panel-users">
+
+            <div class="section-header">
+                <h2>Utenti Registrati</h2>
+                <span class="section-badge" id="users-count">0</span>
+            </div>
+
+            <div class="table-card">
+                <table class="users-table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Pubbliche</th>
+                            <th>Private</th>
+                            <th>Totale</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:32px; color:var(--muted);">
+                                Caricamento...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
         </div>
 
     </div>
@@ -68,10 +252,23 @@
         <div class="lb-footer">
             <div class="lb-info">
                 <div class="lb-counter" id="lb-counter"></div>
-                <div class="lb-author" id="lb-author"></div>
+                <div class="lb-author"  id="lb-author"></div>
             </div>
-            <button class="lb-btn" onclick="AdminGallery.toggleFullscreen()">⛶ Fullscreen</button>
-            <a class="lb-btn" id="lb-download" download>📥 Scarica</a>
+            <button class="lb-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+            <a class="lb-btn" id="lb-download" download title="Scarica">📥</a>
+        </div>
+
+    </div>
+
+    <!-- Delete confirm modal -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal-box">
+            <h3>Elimina utente</h3>
+            <p id="modal-msg">Stai per eliminare l'utente e tutti i suoi file. L'operazione è irreversibile.</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Annulla</button>
+                <button class="btn-confirm-delete" id="modal-confirm">Elimina</button>
+            </div>
         </div>
     </div>
 
@@ -80,5 +277,106 @@
 
     <script src="/js/auth.js"></script>
     <script src="/js/admin.js"></script>
+    <script>
+        // ── Tab switching ──
+        function switchPanel(name) {
+            document.querySelectorAll('.admin-tab').forEach((t, i) => {
+                t.classList.toggle('active', ['gallery','users'][i] === name);
+            });
+            document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel-${name}`).classList.add('active');
+            if (name === 'users') loadUsers();
+        }
+
+        // ── Load users ──
+        async function loadUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted);">Caricamento...</td></tr>`;
+
+            const res = await fetch('/api/admin/users', { headers: Auth.headers() });
+            const users = await res.json();
+
+            document.getElementById('users-count').textContent = users.length;
+
+            if (!users.length) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted);">Nessun utente registrato.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>
+                        <div class="username-cell">
+                            <div class="user-avatar">${u.username.charAt(0)}</div>
+                            <span>${u.username}</span>
+                        </div>
+                    </td>
+                    <td>
+                        ${u.public_count > 0
+                            ? `<span class="badge badge-public">${u.public_count}</span>`
+                            : `<span class="badge-zero">—</span>`}
+                    </td>
+                    <td>
+                        ${u.private_count > 0
+                            ? `<span class="badge badge-private">${u.private_count}</span>`
+                            : `<span class="badge-zero">—</span>`}
+                    </td>
+                    <td style="color:var(--muted); font-size:0.9em;">${u.total}</td>
+                    <td>
+                        <button class="btn-delete" onclick="confirmDelete('${u.username}')">
+                            Elimina
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ── Delete modal ──
+        let pendingDelete = null;
+
+        function confirmDelete(username) {
+            pendingDelete = username;
+            document.getElementById('modal-msg').textContent =
+                `Stai per eliminare "${username}" e tutti i suoi file. L'operazione è irreversibile.`;
+            document.getElementById('delete-modal').classList.add('active');
+            document.getElementById('modal-confirm').onclick = () => deleteUser(username);
+        }
+
+        function closeModal() {
+            document.getElementById('delete-modal').classList.remove('active');
+            pendingDelete = null;
+        }
+
+        async function deleteUser(username) {
+            closeModal();
+            const res = await fetch(`/api/admin/users/${username}`, {
+                method: 'DELETE',
+                headers: Auth.headers()
+            });
+
+            if (res.ok) {
+                showToast(`Utente "${username}" eliminato.`);
+                loadUsers();
+                // Refresh stats
+                loadStats();
+            } else {
+                const data = await res.json();
+                showToast(`Errore: ${data.detail}`);
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('delete-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ── Toast ──
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+    </script>
 </body>
 </html>
