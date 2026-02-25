@@ -150,7 +150,7 @@
 
     <!-- Navbar -->
     <nav class="navbar">
-        <span class="navbar-brand">🕵️ Admin</span>
+        <span class="navbar-brand">Salvatore 💍 Maria</span>
         <span></span>
         <button class="btn-logout" onclick="Auth.logout()">Esci</button>
     </nav>
@@ -187,7 +187,7 @@
         <div class="admin-panel active" id="panel-gallery">
 
             <div class="section-header">
-                <h2>🌍 Pubbliche</h2>
+                <h2>Momenti Pubblici</h2>
                 <span class="section-badge" id="public-count">0</span>
             </div>
             <div class="admin-grid" id="admin-public-grid">
@@ -198,7 +198,7 @@
             </div>
 
             <div class="section-header" style="margin-top: 12px;">
-                <h2>🔒 Cartelle Private</h2>
+                <h2>Momenti Privati</h2>
                 <span class="section-badge" id="private-count">0</span>
             </div>
             <div id="private-folders">
@@ -214,7 +214,7 @@
         <div class="admin-panel" id="panel-users">
 
             <div class="section-header">
-                <h2>👥 Utenti Registrati</h2>
+                <h2>Utenti Registrati</h2>
                 <span class="section-badge" id="users-count">0</span>
             </div>
 
@@ -252,11 +252,12 @@
         <div class="lb-footer">
             <div class="lb-info">
                 <div class="lb-counter" id="lb-counter"></div>
-                <div class="lb-author" id="lb-author"></div>
+                <div class="lb-author"  id="lb-author"></div>
             </div>
-            <button class="lb-btn" onclick="AdminGallery.toggleFullscreen()">⛶ Fullscreen</button>
-            <a class="lb-btn" id="lb-download" download>📥 Scarica</a>
+            <button class="lb-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+            <a class="lb-btn" id="lb-download" download title="Scarica">📥</a>
         </div>
+
     </div>
 
     <!-- Delete confirm modal -->

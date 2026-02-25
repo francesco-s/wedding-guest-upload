@@ -19,12 +19,10 @@
 
         <!-- Upload Card -->
         <div class="upload-card">
-            <!-- Progress bar at top -->
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
 
-            <!-- Drop zone -->
             <div class="drop-zone" id="dropZone">
                 <input type="file" id="fileInput" multiple
                     accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime">
@@ -35,15 +33,13 @@
                 </div>
             </div>
 
-            <!-- Preview strip -->
             <div class="preview-strip" id="previewStrip"></div>
 
-            <!-- Controls -->
             <div class="upload-controls">
                 <label class="toggle-label">
                     <input type="checkbox" id="privateToggle">
                     <div class="toggle-track"></div>
-                    Condividi solo per gli sposi
+                    Condividi solo con gli sposi
                 </label>
                 <button class="btn-upload" id="uploadBtn" disabled onclick="uploadFiles()">
                     Carica
@@ -51,19 +47,9 @@
             </div>
         </div>
 
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab-btn active" id="tab-public" onclick="switchTab('public')">
-                🌍 Caricate da tutti gli invitati
-            </button>
-            <button class="tab-btn" id="tab-private" onclick="switchTab('private')">
-                🔒 Condivise solo con gli sposi
-            </button>
-        </div>
-
         <!-- Gallery header -->
         <div class="gallery-header">
-            <h3 id="gallery-label">Momenti pubblici</h3>
+            <h3>Momenti condivisi</h3>
             <span class="gallery-count" id="gallery-count">0 foto</span>
         </div>
 
@@ -86,20 +72,18 @@
         <div class="lb-footer">
             <div class="lb-info">
                 <div class="lb-counter" id="lb-counter"></div>
-                <div class="lb-author" id="lb-author"></div>
+                <div class="lb-author"  id="lb-author"></div>
             </div>
-            <button class="lb-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
-            <a class="lb-btn" id="lb-download" download>📥 Scarica</a>
+            <button class="lb-btn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+            <a class="lb-btn" id="lb-download" download title="Scarica">📥</a>
         </div>
     </div>
 
-    <!-- Toast notification -->
     <div class="toast" id="toast"></div>
 
     <script src="/js/auth.js"></script>
     <script src="/js/gallery.js"></script>
     <script>
-        // Drag & drop events
         const dropZone = document.getElementById('dropZone');
         dropZone.addEventListener('dragover', e => {
             e.preventDefault();
