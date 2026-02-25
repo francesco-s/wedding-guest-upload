@@ -40,7 +40,7 @@ const AdminGallery = {
         document.getElementById('lb-counter').textContent =
             `${this.currentIndex + 1} / ${this.currentFiles.length}`;
         document.getElementById('lb-author').textContent =
-            f.author ? `📸 ${f.author}` : '';
+            f.author ? `Autore: ${f.author}` : '';
 
         const dl = document.getElementById('lb-download');
         dl.href     = f.url;
@@ -52,10 +52,18 @@ const AdminGallery = {
     },
 
     toggleFullscreen() {
-        const lb = document.getElementById('lightbox');
-        if (!document.fullscreenElement) lb.requestFullscreen();
-        else document.exitFullscreen();
+        const media = document.querySelector('#lb-media video, #lb-media img');
+        const target = media || document.getElementById('lightbox');
+
+        if (!document.fullscreenElement) {
+            target.requestFullscreen().catch(err => {
+                console.warn('Fullscreen error:', err);
+            });
+        } else {
+            document.exitFullscreen();
+        }
     }
+
 };
 
 document.addEventListener('keydown', e => {

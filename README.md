@@ -157,21 +157,21 @@ Push to GitHub and connect the repo on [render.com](https://render.com).
 
 ```dockerfile
 FROM python:3.11-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
 WORKDIR /app
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-cache
+
 COPY . .
-RUN pip install fastapi uvicorn[standard] python-multipart python-jose[cryptography] aiofiles
 EXPOSE 8000
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD [".venv/bin/uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ```bash
 docker build -t wedding-app .
 docker run -p 8000:8000 -v $(pwd)/data:/app/data wedding-app
 ```
-
-The `-v` flag is required to persist photos and the database across container restarts.
-
----
 
 ## Configuration
 
