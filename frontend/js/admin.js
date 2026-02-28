@@ -52,11 +52,8 @@ const AdminGallery = {
     },
 
     toggleFullscreen() {
-        const media = document.querySelector('#lb-media video, #lb-media img');
-        const target = media || document.getElementById('lightbox');
-
         if (!document.fullscreenElement) {
-            target.requestFullscreen().catch(err => {
+            document.documentElement.requestFullscreen().catch(err => {
                 console.warn('Fullscreen error:', err);
             });
         } else {
