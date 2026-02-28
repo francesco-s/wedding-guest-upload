@@ -121,6 +121,8 @@ function openLightbox(index) {
     currentIndex = index;
     renderLightbox();
     document.getElementById('lightbox').classList.add('active');
+    // Add lightbox state to history so that back button can close it
+    history.pushState({ lightbox: true }, '');
 }
 
 function closeLightbox() {
@@ -128,6 +130,8 @@ function closeLightbox() {
     if (video) { video.pause(); video.currentTime = 0; }
     if (document.fullscreenElement) document.exitFullscreen();
     document.getElementById('lightbox').classList.remove('active');
+    // Remove lightbox state from history
+    if (history.state?.lightbox) history.back();
 }
 
 function navLightbox(dir) {
@@ -205,3 +209,14 @@ document.addEventListener('keydown', e => {
             : document.getElementById('lb-prev').click();
     }, { passive: true });
 })();
+
+// -- History navigation for lightbox ---
+window.addEventListener('popstate', e => {
+    if (document.getElementById('lightbox').classList.contains('active')) {
+        const video = document.querySelector('#lb-media video');
+        if (video) { video.pause(); video.currentTime = 0; }
+        if (document.fullscreenElement) document.exitFullscreen();
+        document.getElementById('lightbox').classList.remove('active');
+    }
+});
+

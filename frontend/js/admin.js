@@ -12,6 +12,7 @@ const AdminGallery = {
         this.currentIndex = index;
         this.renderLightbox();
         document.getElementById('lightbox').classList.add('active');
+        history.pushState({ lightbox: true }, '');
     },
 
     closeLightbox() {
@@ -19,6 +20,7 @@ const AdminGallery = {
         if (video) { video.pause(); video.currentTime = 0; }
         if (document.fullscreenElement) document.exitFullscreen();
         document.getElementById('lightbox').classList.remove('active');
+        if (history.state?.lightbox) history.back();
     },
 
     nav(dir) {
@@ -63,6 +65,17 @@ const AdminGallery = {
 
 };
 
+// -- History handling for lightbox back button support --
+window.addEventListener('popstate', e => {
+    if (document.getElementById('lightbox').classList.contains('active')) {
+        const video = document.querySelector('#lb-media video');
+        if (video) { video.pause(); video.currentTime = 0; }
+        if (document.fullscreenElement) document.exitFullscreen();
+        document.getElementById('lightbox').classList.remove('active');
+    }
+});
+
+// --- Keyboard navigation ---
 document.addEventListener('keydown', e => {
     if (!document.getElementById('lightbox').classList.contains('active')) return;
     if (e.key === 'Escape')     AdminGallery.closeLightbox();
