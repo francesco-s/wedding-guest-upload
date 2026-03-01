@@ -22,10 +22,16 @@ const Auth = {
     },
 
     requireAuth() {
-        if (!this.token) window.location.href = '/';
+        if (!this.token) {
+            window.location.href = '/';
+            throw new Error('Unauthorized');
+        }
     },
 
     requireAdmin() {
-        if (!this.token || !this.isAdmin) window.location.href = '/';
+        if (!this.token || !this.isAdmin) {
+            window.location.href = '/';
+            throw new Error('Unauthorized');
+        }
     }
 };

@@ -220,8 +220,9 @@ async function toggleFolder(headerEl, username) {
     let isDragging = false;
 
     lb.addEventListener('touchstart', e => {
-        startX    = e.touches[0].clientX;
-        startY    = e.touches[0].clientY;
+        if (e.target.closest('video')) return;
+        startX     = e.touches[0].clientX;
+        startY     = e.touches[0].clientY;
         isDragging = true;
     }, { passive: true });
 

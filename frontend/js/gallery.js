@@ -18,7 +18,9 @@ document.getElementById('fileInput').addEventListener('change', function () {
         thumb.className = 'preview-thumb';
         if (file.type.startsWith('image/')) {
             const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
+            const url = URL.createObjectURL(file);
+            img.onload = () => URL.revokeObjectURL(url);
+            img.src = url;
             thumb.appendChild(img);
         } else {
             thumb.textContent = '🎬';
@@ -186,8 +188,9 @@ document.addEventListener('keydown', e => {
     let startX = 0, startY = 0, isDragging = false;
 
     lb.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
+        if (e.target.closest('video')) return;
+        startX     = e.touches[0].clientX;
+        startY     = e.touches[0].clientY;
         isDragging = true;
     }, { passive: true });
 

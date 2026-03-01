@@ -22,7 +22,7 @@ body {
     min-height: 100vh;
     background-color: var(--bg);
     background-image:
-        linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.78)),
+        linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
         url('/static/bg.jpg'),
         url('https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&q=80');
     background-size: cover;
@@ -96,11 +96,11 @@ body {
     border-radius: var(--radius);
     padding: 40px 32px;
     width: 100%;
-    max-width: 400px;
+    max-width: 450px;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
 }
-.auth-card h1 { font-size: 2em; text-align: center; margin-bottom: 8px; }
+.auth-card h1 { font-size: 1.8em; text-align: center; margin-bottom: 8px; }
 .auth-card p  { text-align: center; color: var(--muted); margin-bottom: 28px; }
 
 .form-group { margin-bottom: 16px; }
