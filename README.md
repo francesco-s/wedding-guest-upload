@@ -188,4 +188,3 @@ admin_hash = hashlib.sha256("your-new-password".encode()).hexdigest()
 ## QR Code
 
 Generate a QR code at [qrcode-monkey.com](https://www.qrcode-monkey.com) pointing to your domain and print it on table cards for the venue.
-s

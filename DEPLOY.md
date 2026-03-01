@@ -110,7 +110,7 @@ sudo nano /etc/nginx/sites-available/wedding
 ```nginx
 server {
     listen 80;
-    server_name yoursite.com;
+    server_name yoursite.example;
 
     client_max_body_size 200M;
 
@@ -133,7 +133,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 7. Domain DNS (Porkbun)
 
-In **Porkbun → Domain Management → salvatoredonatella.space → DNS**:
+In **Porkbun → Domain Management → yoursite.example → DNS**:
 
 1. Delete the default `ALIAS` and `CNAME` records pointing to `pixie.porkbun.com`
 2. Add:
@@ -175,7 +175,7 @@ sudo journalctl -u nginx -n 30
 sudo journalctl -u wedding -f
 ```
 
-Open **https://yoursite.com** in your browser — you should see the app with padlock.
+Open **https://yoursite.example** in your browser — you should see the app with padlock.
 
 ---
 
