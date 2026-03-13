@@ -30,6 +30,7 @@ const AdminGallery = {
     },
 
     renderLightbox() {
+        if (window._resetLightboxZoom) window._resetLightboxZoom();
         const f = this.currentFiles[this.currentIndex];
         const mediaEl = document.getElementById('lb-media');
 
@@ -211,139 +212,154 @@ async function toggleFolder(headerEl, username) {
     }
 }
 
-// ── Swipe support ─────────────────────────────────────────────────────────────
-
-(function initSwipe() {
-    const lb = document.getElementById('lightbox');
-    let startX = 0;
-    let startY = 0;
-    let isDragging = false;
-
-    lb.addEventListener('touchstart', e => {
-        if (e.target.closest('video')) return;
-        startX     = e.touches[0].clientX;
-        startY     = e.touches[0].clientY;
-        isDragging = true;
-    }, { passive: true });
-
-    lb.addEventListener('touchmove', e => {
-        if (!isDragging) return;
-        // Prevent vertical scroll while swiping horizontally
-        const dx = Math.abs(e.touches[0].clientX - startX);
-        const dy = Math.abs(e.touches[0].clientY - startY);
-        if (dx > dy) e.preventDefault();
-    }, { passive: false });
-
-    lb.addEventListener('touchend', e => {
-        if (!isDragging) return;
-        isDragging = false;
-
-        const dx = e.changedTouches[0].clientX - startX;
-        const dy = e.changedTouches[0].clientY - startY;
-
-        // Ignore if mostly vertical (scroll intent)
-        if (Math.abs(dy) > Math.abs(dx)) return;
-
-        // Minimum swipe distance: 50px
-        if (Math.abs(dx) < 50) return;
-
-        if (dx < 0) {
-            // Swipe left → next
-            document.getElementById('lb-next').click();
-        } else {
-            // Swipe right → previous
-            document.getElementById('lb-prev').click();
-        }
-    }, { passive: true });
-})();
-
-// --- Pinch to zoom ---
-(function initPinch() {
+(function initInteractions() {
+    const lb      = document.getElementById('lightbox');
     const lbMedia = document.getElementById('lb-media');
-    let scale     = 1;
-    let lastScale = 1;
-    let originX   = 0;
-    let originY   = 0;
+
+    // ── State ──────────────────────────────────────────────────────────────
+    let scale      = 1;
+    let lastScale  = 1;
     let translateX = 0;
     let translateY = 0;
 
-    let initialDistance = 0;
-    let isPinching = false;
+    let isPinching       = false;
+    let initialDistance  = 0;
 
+    // Pan state
+    let isPanning  = false;
+    let panStartX  = 0;
+    let panStartY  = 0;
+    let panOriginX = 0;
+    let panOriginY = 0;
+
+    // Swipe state (only when scale === 1)
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let isSwiping   = false;
+
+    // ── Helpers ────────────────────────────────────────────────────────────
     function getDistance(touches) {
-        const dx = touches[0].clientX - touches[1].clientX;
-        const dy = touches[0].clientY - touches[1].clientY;
-        return Math.hypot(dx, dy);
-    }
-
-    function getMidpoint(touches) {
-        return {
-            x: (touches[0].clientX + touches[1].clientX) / 2,
-            y: (touches[0].clientY + touches[1].clientY) / 2,
-        };
+        return Math.hypot(
+            touches[0].clientX - touches[1].clientX,
+            touches[0].clientY - touches[1].clientY
+        );
     }
 
     function applyTransform(el) {
-        el.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        el.style.transition  = 'none';
+        el.style.transform   = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
         el.style.transformOrigin = 'center center';
-        el.style.transition = 'none';
     }
 
     function resetTransform(el) {
         scale = 1; translateX = 0; translateY = 0;
-        el.style.transform = '';
-        el.style.transition = 'transform 0.2s';
+        el.style.transition = 'transform 0.25s ease';
+        el.style.transform  = '';
     }
 
-    lbMedia.addEventListener('touchstart', e => {
+    function getMedia() {
+        return lbMedia.querySelector('img, video');
+    }
+
+    // ── Reset on slide change ──────────────────────────────────────────────
+    // Call this whenever a new slide is rendered
+    window._resetLightboxZoom = () => {
+        const el = getMedia();
+        if (el) resetTransform(el);
+    };
+
+    // ── Touch Start ────────────────────────────────────────────────────────
+    lb.addEventListener('touchstart', e => {
         if (e.touches.length === 2) {
-            isPinching       = true;
-            initialDistance  = getDistance(e.touches);
-            lastScale        = scale;
-            const mid        = getMidpoint(e.touches);
-            originX          = mid.x;
-            originY          = mid.y;
+            // Start pinch
+            isPinching      = true;
+            isSwiping       = false;
+            isPanning        = false;
+            initialDistance = getDistance(e.touches);
+            lastScale       = scale;
             e.preventDefault();
+        } else if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            if (e.target.closest('video')) return;
+
+            if (scale > 1) {
+                // Start pan
+                isPanning  = true;
+                isSwiping  = false;
+                panStartX  = touch.clientX;
+                panStartY  = touch.clientY;
+                panOriginX = translateX;
+                panOriginY = translateY;
+            } else {
+                // Start swipe
+                isSwiping   = true;
+                isPanning   = false;
+                swipeStartX = touch.clientX;
+                swipeStartY = touch.clientY;
+            }
         }
     }, { passive: false });
 
-    lbMedia.addEventListener('touchmove', e => {
-        if (!isPinching || e.touches.length !== 2) return;
-        e.preventDefault();
+    // ── Touch Move ─────────────────────────────────────────────────────────
+    lb.addEventListener('touchmove', e => {
+        if (isPinching && e.touches.length === 2) {
+            e.preventDefault();
+            const el = getMedia();
+            if (!el) return;
+            const newScale = lastScale * (getDistance(e.touches) / initialDistance);
+            scale = Math.min(Math.max(newScale, 1), 4);
+            applyTransform(el);
 
-        const el       = lbMedia.querySelector('img, video');
-        if (!el) return;
+        } else if (isPanning && e.touches.length === 1) {
+            e.preventDefault();
+            const el = getMedia();
+            if (!el) return;
+            translateX = panOriginX + (e.touches[0].clientX - panStartX);
+            translateY = panOriginY + (e.touches[0].clientY - panStartY);
+            applyTransform(el);
 
-        const newScale = lastScale * (getDistance(e.touches) / initialDistance);
-        scale          = Math.min(Math.max(newScale, 1), 4);   // clamp 1x – 4x
-
-        applyTransform(el);
+        } else if (isSwiping && e.touches.length === 1) {
+            const dx = Math.abs(e.touches[0].clientX - swipeStartX);
+            const dy = Math.abs(e.touches[0].clientY - swipeStartY);
+            if (dx > dy) e.preventDefault();
+        }
     }, { passive: false });
 
-    lbMedia.addEventListener('touchend', e => {
-        if (!isPinching) return;
-        isPinching = false;
+    // ── Touch End ──────────────────────────────────────────────────────────
+    lb.addEventListener('touchend', e => {
+        if (isPinching) {
+            isPinching = false;
+            const el = getMedia();
+            if (el && scale <= 1) resetTransform(el);
+        }
 
-        const el = lbMedia.querySelector('img, video');
-        if (!el) return;
+        if (isPanning) {
+            isPanning = false;
+        }
 
-        // Snap back to 1x if pinched below 1
-        if (scale <= 1) resetTransform(el);
+        if (isSwiping && e.changedTouches.length === 1) {
+            isSwiping = false;
+            const dx = e.changedTouches[0].clientX - swipeStartX;
+            const dy = e.changedTouches[0].clientY - swipeStartY;
+            if (Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 50) return;
+            dx < 0
+                ? document.getElementById('lb-next').click()
+                : document.getElementById('lb-prev').click();
+        }
     }, { passive: true });
 
-    // Double-tap to reset zoom
+    // ── Double tap to reset ────────────────────────────────────────────────
     let lastTap = 0;
-    lbMedia.addEventListener('touchend', e => {
+    lb.addEventListener('touchend', e => {
         if (e.touches.length > 0) return;
         const now = Date.now();
         if (now - lastTap < 300) {
-            const el = lbMedia.querySelector('img, video');
+            const el = getMedia();
             if (el) resetTransform(el);
         }
         lastTap = now;
     }, { passive: true });
 })();
-
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
