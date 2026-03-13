@@ -553,6 +553,15 @@ body {
 }
 
 /* ────────────────────────────────
+   SHARED: TOUCH ACTIONS
+──────────────────────────────── */
+
+#lb-media img,
+#lb-media video {
+    touch-action: none;   /* let JS handle all touch on the media */
+}
+
+/* ────────────────────────────────
    RESPONSIVE
 ──────────────────────────────── */
 @media (max-width: 480px) {

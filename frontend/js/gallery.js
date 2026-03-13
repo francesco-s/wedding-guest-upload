@@ -182,148 +182,124 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight') navLightbox(1);
 });
 
-// --- Swipe & Pinch to Zoom ---
-(function initTouch() {
+// --- Swipe ---
+(function initSwipe() {
     const lb = document.getElementById('lightbox');
-    
-    // Swipe vars
     let startX = 0, startY = 0, isDragging = false;
-    
-    // Zoom vars
-    let currentScale = 1;
-    let initialDist = 0;
-    let isZooming = false;
-    
-    function getDistance(touches) {
-        return Math.hypot(
-            touches[0].clientX - touches[1].clientX,
-            touches[0].clientY - touches[1].clientY
-        );
-    }
 
     lb.addEventListener('touchstart', e => {
-        if (e.target.closest('video')) return; // ignore native video controls
-        
-        if (e.touches.length === 2) {
-            // Start pinch to zoom
-            isZooming = true;
-            isDragging = false;
-            initialDist = getDistance(e.touches);
-            e.preventDefault();
-        } else if (e.touches.length === 1 && currentScale === 1) {
-            // Start normal swipe (only if not zoomed in)
-            isZooming = false;
-            isDragging = true;
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-        }
-    }, { passive: false }); // Needs false to prevent default on zoom
+        if (e.target.closest('video')) return;
+        startX     = e.touches[0].clientX;
+        startY     = e.touches[0].clientY;
+        isDragging = true;
+    }, { passive: true });
 
     lb.addEventListener('touchmove', e => {
-        if (e.target.closest('video')) return;
-
-        if (isZooming && e.touches.length === 2) {
-            e.preventDefault(); // Stop page scroll
-            const img = document.querySelector('#lb-media img');
-            if (!img) return;
-
-            const newDist = getDistance(e.touches);
-            // Calculate scale factor (distance ratio)
-            const scaleFactor = newDist / initialDist;
-            
-            // Limit zoom between 1x and 4x
-            const newScale = Math.min(Math.max(1, currentScale * scaleFactor), 4);
-            img.style.transform = `scale(${newScale})`;
-            img.style.transition = 'none'; // instant follow finger
-            
-            // Note: we don't update currentScale here so it calculates relative to start
-        } 
-        else if (isDragging && currentScale === 1) {
-            const dx = Math.abs(e.touches[0].clientX - startX);
-            const dy = Math.abs(e.touches[0].clientY - startY);
-            if (dx > dy) e.preventDefault(); // prevent vertical scroll on horizontal swipe
-        }
+        if (!isDragging) return;
+        const dx = Math.abs(e.touches[0].clientX - startX);
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dx > dy) e.preventDefault();
     }, { passive: false });
 
     lb.addEventListener('touchend', e => {
-        const img = document.querySelector('#lb-media img');
-        
-        if (isZooming && e.touches.length < 2) {
-            // Ended zoom
-            isZooming = false;
-            if (img) {
-                // Read exact applied scale to save it
-                const match = img.style.transform.match(/scale\(([^)]+)\)/);
-                if (match) currentScale = parseFloat(match[1]);
-                
-                // Snap back to 1 if too small, or reset transition
-                img.style.transition = 'transform 0.2s ease';
-                if (currentScale < 1.05) {
-                    currentScale = 1;
-                    img.style.transform = `scale(1)`;
-                }
-            }
-            return;
-        }
-
-        if (isDragging && currentScale === 1) {
-            isDragging = false;
-            if (!e.changedTouches.length) return;
-            
-            const dx = e.changedTouches[0].clientX - startX;
-            const dy = e.changedTouches[0].clientY - startY;
-
-            if (Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 50) return;
-            
-            dx < 0
-                ? document.getElementById('lb-next').click()
-                : document.getElementById('lb-prev').click();
-        }
-    }, { passive: true });
-
-    // Reset zoom when navigating slides or closing
-    function resetZoom() {
-        currentScale = 1;
-        isZooming = false;
+        if (!isDragging) return;
         isDragging = false;
-        const img = document.querySelector('#lb-media img');
-        if (img) {
-            img.style.transform = `scale(1)`;
-            img.style.transition = 'transform 0.2s ease';
-        }
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 50) return;
+        dx < 0
+            ? document.getElementById('lb-next').click()
+            : document.getElementById('lb-prev').click();
+    }, { passive: true });
+})();
+
+// --- Pinch to zoom ---
+(function initPinch() {
+    const lbMedia = document.getElementById('lb-media');
+    let scale     = 1;
+    let lastScale = 1;
+    let originX   = 0;
+    let originY   = 0;
+    let translateX = 0;
+    let translateY = 0;
+
+    let initialDistance = 0;
+    let isPinching = false;
+
+    function getDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.hypot(dx, dy);
     }
 
-    // Attach to existing buttons
-    document.getElementById('lb-next').addEventListener('click', resetZoom);
-    document.getElementById('lb-prev').addEventListener('click', resetZoom);
-    document.querySelector('.lb-close').addEventListener('click', resetZoom);
-})();
+    function getMidpoint(touches) {
+        return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2,
+        };
+    }
 
-// --- Double Tap to Zoom ---
-(function initDoubleTap() {
-    const lbMedia = document.getElementById('lb-media');
-    let lastTap = 0;
+    function applyTransform(el) {
+        el.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        el.style.transformOrigin = 'center center';
+        el.style.transition = 'none';
+    }
+
+    function resetTransform(el) {
+        scale = 1; translateX = 0; translateY = 0;
+        el.style.transform = '';
+        el.style.transition = 'transform 0.2s';
+    }
+
+    lbMedia.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            isPinching       = true;
+            initialDistance  = getDistance(e.touches);
+            lastScale        = scale;
+            const mid        = getMidpoint(e.touches);
+            originX          = mid.x;
+            originY          = mid.y;
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    lbMedia.addEventListener('touchmove', e => {
+        if (!isPinching || e.touches.length !== 2) return;
+        e.preventDefault();
+
+        const el       = lbMedia.querySelector('img, video');
+        if (!el) return;
+
+        const newScale = lastScale * (getDistance(e.touches) / initialDistance);
+        scale          = Math.min(Math.max(newScale, 1), 4);   // clamp 1x – 4x
+
+        applyTransform(el);
+    }, { passive: false });
 
     lbMedia.addEventListener('touchend', e => {
-        const img = e.target.closest('img');
-        if (!img) return; // Only apply to images
+        if (!isPinching) return;
+        isPinching = false;
 
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
+        const el = lbMedia.querySelector('img, video');
+        if (!el) return;
 
-        if (tapLength < 300 && tapLength > 0) {
-            e.preventDefault(); // Prevent standard double-tap scroll
-            
-            // Toggle zoom
-            const isZoomed = img.style.transform.includes('scale(2)');
-            img.style.transition = 'transform 0.3s ease';
-            img.style.transform = isZoomed ? 'scale(1)' : 'scale(2)';
-            img.style.transformOrigin = 'center center';
-            
+        // Snap back to 1x if pinched below 1
+        if (scale <= 1) resetTransform(el);
+    }, { passive: true });
+
+    // Double-tap to reset zoom
+    let lastTap = 0;
+    lbMedia.addEventListener('touchend', e => {
+        if (e.touches.length > 0) return;
+        const now = Date.now();
+        if (now - lastTap < 300) {
+            const el = lbMedia.querySelector('img, video');
+            if (el) resetTransform(el);
         }
-        lastTap = currentTime;
-    }, { passive: false });
+        lastTap = now;
+    }, { passive: true });
 })();
+
 
 // -- History navigation for lightbox ---
 window.addEventListener('popstate', e => {
