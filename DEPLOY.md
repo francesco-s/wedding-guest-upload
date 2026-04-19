@@ -112,13 +112,17 @@ server {
     listen 80;
     server_name yoursite.example;
 
-    client_max_body_size 200M;
+    client_max_body_size 0;        # No size limit (required for large video uploads)
+    client_body_timeout  600s;     # Allow slow uploads without dropping the connection
 
     location / {
-        proxy_pass         http://127.0.0.1:8000;
-        proxy_set_header   Host $host;
-        proxy_set_header   X-Real-IP $remote_addr;
-        proxy_read_timeout 120s;
+        proxy_pass              http://127.0.0.1:8000;
+        proxy_set_header        Host $host;
+        proxy_set_header        X-Real-IP $remote_addr;
+        proxy_read_timeout      600s;   # Wait up to 10 min for a response (large uploads)
+        proxy_send_timeout      600s;   # Allow 10 min to send the request body upstream
+        proxy_connect_timeout   75s;    # Time to establish connection to upstream
+        proxy_request_buffering off;    # Stream body directly to FastAPI, don't buffer to disk
     }
 }
 ```
@@ -195,26 +199,38 @@ sudo systemctl restart wedding
 If 40 GB is not enough for photos and videos, add a **Hetzner Volume**:
 
 1. **Hetzner Console → Volumes → Create Volume**
-2. Size: 100 GB (~€4.90/month)
+2. Size: 500 GB (~€24.50/month) — or whatever you need
 3. Same datacenter as the server → Attach
+4. Mount option: **Automatic** (Hetzner formats and mounts it for you)
+
+The volume will be immediately available at `/mnt/HC_Volume_<ID>` — no manual formatting or mounting needed.
 
 ```bash
-# Format (first time only — get the ID from Hetzner Console)
-sudo mkfs.ext4 -F /dev/disk/by-id/scsi-0HC_Volume_XXXXXXXX
-
-# Mount
-sudo mkdir -p /mnt/storage
-sudo mount /dev/disk/by-id/scsi-0HC_Volume_XXXXXXXX /mnt/storage
-
-# Auto-mount on reboot
-echo "/dev/disk/by-id/scsi-0HC_Volume_XXXXXXXX /mnt/storage ext4 discard,nofail,defaults 0 0" | sudo tee -a /etc/fstab
-
-# Move app data to the volume
-sudo mv /opt/wedding/data /mnt/storage/data
-sudo ln -s /mnt/storage/data /opt/wedding/data
-sudo chown -R wedding:wedding /mnt/storage/data
-sudo systemctl restart wedding
+# Move app data to the volume (replace <ID> with your actual volume ID)
+sudo systemctl stop wedding
+sudo mv /opt/wedding/data /mnt/HC_Volume_<ID>/data
+sudo ln -s /mnt/HC_Volume_<ID>/data /opt/wedding/data
+sudo chown -R wedding:wedding /mnt/HC_Volume_<ID>/data
+sudo systemctl start wedding
 ```
+
+Verify it worked:
+
+```bash
+ls -la /opt/wedding/data       # should point to /mnt/HC_Volume_<ID>/data
+df -h /mnt/HC_Volume_<ID>      # should show full volume free space
+sudo systemctl status wedding  # should be active (running)
+```
+
+The `fstab` entry for auto-mount on reboot is added automatically by Hetzner when you choose the **Automatic** mount option. You can verify with:
+
+```bash
+grep HC_Volume /etc/fstab
+```
+
+> ⚠️ **If you chose Manual mount instead**: you'll need to format with `mkfs.ext4`, mount manually, and add the `fstab` entry yourself — see [Hetzner's mounting tutorial](https://community.hetzner.com/tutorials/howto-linux-mount/).
+
+> ⚠️ **Note**: Hetzner Backups and Snapshots do **not** include attached Volumes. Back up your `/mnt/HC_Volume_<ID>/data` folder separately if needed.
 
 ---
 
