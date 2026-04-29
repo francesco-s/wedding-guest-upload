@@ -3,12 +3,15 @@ import aiofiles
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from ..auth import get_current_user
 from ..config import PUBLIC_DIR, PRIVATE_DIR, ALLOWED_EXTENSIONS
 
 router = APIRouter(prefix="/api/media", tags=["media"])
 
+VIDEO_EXTENSIONS = {".mp4", ".mov"}
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────
 
 def _safe(name: str) -> str:
     return "".join(c for c in name if c.isalnum())
@@ -28,6 +31,55 @@ def _save_path(filename: str, author: str, is_public: bool) -> Path:
         user_dir.mkdir(exist_ok=True)
         return user_dir / new_name
 
+
+def _make_thumb(src: Path) -> Path | None:
+    """Generate a 600x600 JPEG thumbnail next to the original. Skip videos."""
+    if src.suffix.lower() in VIDEO_EXTENSIONS:
+        return None
+    thumb = src.parent / f"thumb_{src.stem}.jpg"
+    if thumb.exists():
+        return thumb
+    try:
+        from PIL import Image
+        with Image.open(src) as img:
+            img.thumbnail((600, 600))
+            img.convert("RGB").save(thumb, "JPEG", quality=72, optimize=True)
+        return thumb
+    except Exception:
+        return None
+
+
+def _url_for(f: Path) -> str:
+    """Build the /uploads/... URL for a file."""
+    if PUBLIC_DIR in f.parents:
+        return f"/uploads/public/{f.name}"
+    return f"/uploads/private/{f.parent.name}/{f.name}"
+
+
+def _file_info(f: Path, show_author: bool) -> dict:
+    suffix = f.suffix.lower()
+    is_video = suffix in VIDEO_EXTENSIONS
+
+    author = ""
+    if show_author:
+        try:
+            author = f.name.split("_")[2]
+        except IndexError:
+            pass
+
+    thumb = f.parent / f"thumb_{f.stem}.jpg"
+    thumb_url = _url_for(thumb) if thumb.exists() else _url_for(f)
+
+    return {
+        "filename":  f.name,
+        "url":       _url_for(f),
+        "thumb_url": thumb_url,
+        "is_video":  is_video,
+        "author":    author,
+    }
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────
 
 @router.post("/upload")
 async def upload(
@@ -49,6 +101,9 @@ async def upload(
             content = await file.read()
             await f.write(content)
 
+        # Generate thumbnail synchronously (fast for mobile-sized uploads)
+        _make_thumb(save_path)
+
         uploaded.append(save_path.name)
 
     return {"uploaded": uploaded, "count": len(uploaded)}
@@ -57,7 +112,9 @@ async def upload(
 @router.get("/public")
 def get_public(user: dict = Depends(get_current_user)):
     files = sorted(PUBLIC_DIR.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
-    return [_file_info(f, show_author=True) for f in files if f.is_file()]
+    # Exclude thumb_ files from the listing
+    return [_file_info(f, show_author=True) for f in files
+            if f.is_file() and not f.name.startswith("thumb_")]
 
 
 @router.get("/private")
@@ -67,21 +124,5 @@ def get_private(user: dict = Depends(get_current_user)):
     if not user_dir.exists():
         return []
     files = sorted(user_dir.glob("*"), key=lambda f: f.stat().st_mtime, reverse=True)
-    return [_file_info(f, show_author=False) for f in files if f.is_file()]
-
-
-def _file_info(f: Path, show_author: bool) -> dict:
-    suffix = f.suffix.lower()
-    is_video = suffix in {".mp4", ".mov"}
-    author = ""
-    if show_author:
-        try:
-            author = f.name.split("_")[2]
-        except IndexError:
-            pass
-    return {
-        "filename": f.name,
-        "url": f"/uploads/{'public' if PUBLIC_DIR in f.parents else f'private/{f.parent.name}'}/{f.name}",
-        "is_video": is_video,
-        "author": author
-    }
+    return [_file_info(f, show_author=False) for f in files
+            if f.is_file() and not f.name.startswith("thumb_")]

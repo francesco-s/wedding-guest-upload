@@ -117,7 +117,7 @@ function renderGrid(files, gridEl, storeKey) {
                     <span class="video-play-icon">▶</span>
                 </div>
                 <span class="video-badge">▶ Video</span>`
-                : `<img data-src="${f.url}" alt="${f.filename}" class="lazy">`}
+                : `<img data-src="${f.thumb_url || f.url}" alt="${f.filename}" class="lazy">`}
             ${f.author
                 ? `<div class="author-badge">${f.author}</div>`
                 : ''}
