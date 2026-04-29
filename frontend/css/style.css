@@ -295,6 +295,8 @@ body {
     cursor: pointer;
     border-radius: 4px;
     position: relative;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 200px;
     background: var(--surface2);
 }
 .gallery-item img,
