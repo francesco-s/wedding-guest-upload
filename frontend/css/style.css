@@ -27,7 +27,6 @@ body {
         url('https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&q=80');
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
 }
 
 /* ── Navbar ── */
@@ -96,8 +95,6 @@ body {
     padding: 40px 32px;
     width: 100%;
     max-width: 450px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
 }
 .auth-card h1 { font-size: 1.8em; text-align: center; margin-bottom: 8px; }
 .auth-card p  { text-align: center; color: var(--muted); margin-bottom: 28px; }
@@ -141,8 +138,6 @@ body {
     border-radius: var(--radius);
     overflow: hidden;
     margin-bottom: 28px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
 }
 .drop-zone {
     border: 2px dashed var(--border);
@@ -341,8 +336,6 @@ body {
     border-radius: var(--radius);
     padding: 16px 20px;
     text-align: center;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
 }
 .stat-card .value {
     font-size: 2em; font-weight: 700;
@@ -373,8 +366,6 @@ body {
     border-radius: var(--radius);
     overflow: hidden;
     margin-bottom: 10px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
 }
 .user-folder-header {
     padding: 14px 18px;
@@ -504,7 +495,6 @@ body {
     font-size: 0.9em; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     opacity: 0; pointer-events: none; transition: opacity 0.3s;
     z-index: 9000; white-space: nowrap;
-    backdrop-filter: blur(12px);
 }
 .toast.show { opacity: 1; }
 
