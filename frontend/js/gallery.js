@@ -32,6 +32,21 @@ document.getElementById('fileInput').addEventListener('change', function () {
     btn.textContent = files.length > 0 ? `Carica ${files.length} file` : 'Carica';
 });
 
+// --- Lazy loader ---
+function observeLazyImages(container) {
+    const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.classList.remove('lazy');
+            obs.unobserve(img);
+        });
+    }, { rootMargin: '200px' });
+
+    container.querySelectorAll('img.lazy').forEach(img => observer.observe(img));
+}
+
 // --- Load public gallery only ---
 async function loadGallery() {
     const grid = document.getElementById('gallery-grid');
@@ -56,12 +71,16 @@ async function loadGallery() {
     grid.innerHTML = files.map((f, i) => `
         <div class="gallery-item" onclick="openLightbox(${i})">
             ${f.is_video
-                ? `<video src="${f.url}" preload="metadata"></video>
-                   <span class="video-badge">▶ Video</span>`
-                : `<img src="${f.url}" loading="lazy" alt="${f.filename}">`}
+                ? `<div class="video-placeholder">
+                    <span class="video-play-icon">▶</span>
+                </div>
+                <span class="video-badge">▶ Video</span>`
+                : `<img data-src="${f.url}" alt="${f.filename}" class="lazy">`}
             ${f.author ? `<div class="author-badge">📸 ${f.author}</div>` : ''}
         </div>
     `).join('');
+
+    observeLazyImages(grid);
 }
 
 // --- Upload ---

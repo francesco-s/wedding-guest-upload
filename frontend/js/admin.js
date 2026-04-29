@@ -84,6 +84,21 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight') AdminGallery.nav(1);
 });
 
+// --- Lazy loader ---
+function observeLazyImages(container) {
+    const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const img = entry.target;
+            img.src = img.dataset.src;
+            img.classList.remove('lazy');
+            obs.unobserve(img);
+        });
+    }, { rootMargin: '200px' });
+
+    container.querySelectorAll('img.lazy').forEach(img => observer.observe(img));
+}
+
 // ── Grid renderer ────────────────────────────────────────────────────────────
 
 function renderGrid(files, gridEl, storeKey) {
@@ -98,14 +113,18 @@ function renderGrid(files, gridEl, storeKey) {
     gridEl.innerHTML = files.map((f, i) => `
         <div class="gallery-item" onclick="AdminGallery.openFor('${storeKey}', ${i})">
             ${f.is_video
-                ? `<video src="${f.url}" muted preload="metadata"></video>
-                   <span class="video-badge">▶</span>`
-                : `<img src="${f.url}" alt="${f.filename}" loading="lazy">`}
+                ? `<div class="video-placeholder">
+                    <span class="video-play-icon">▶</span>
+                </div>
+                <span class="video-badge">▶ Video</span>`
+                : `<img data-src="${f.url}" alt="${f.filename}" class="lazy">`}
             ${f.author
                 ? `<div class="author-badge">${f.author}</div>`
                 : ''}
         </div>
     `).join('');
+
+    observeLazyImages(gridEl);
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
