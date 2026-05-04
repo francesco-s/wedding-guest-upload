@@ -63,7 +63,6 @@ const AdminGallery = {
             document.exitFullscreen();
         }
     }
-
 };
 
 // -- History handling for lightbox back button support --
@@ -97,6 +96,13 @@ function observeLazyImages(container) {
     }, { rootMargin: '200px' });
 
     container.querySelectorAll('img.lazy').forEach(img => observer.observe(img));
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Creates a safe DOM id from any string (removes spaces, quotes, etc)
+function safeDomId(str) {
+    return str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 }
 
 // ── Grid renderer ────────────────────────────────────────────────────────────
@@ -181,9 +187,14 @@ async function loadPrivateFolders() {
             return;
         }
 
-        container.innerHTML = usersWithPrivate.map(u => `
+        // We escape the string using single quotes and use safeDomId for the element ID
+        container.innerHTML = usersWithPrivate.map(u => {
+            const safeId = safeDomId(u.username);
+            // Replace single quotes with escaped quotes so it doesn't break the onclick handler
+            const escapedUsername = u.username.replace(/'/g, "\\'");
+            return `
             <div class="user-folder">
-                <div class="user-folder-header" onclick="toggleFolder(this, '${u.username}')">
+                <div class="user-folder-header" onclick="toggleFolder(this, '${escapedUsername}', '${safeId}')">
                     <div class="folder-info">
                         <span>📁</span>
                         <span>${u.username}</span>
@@ -191,9 +202,9 @@ async function loadPrivateFolders() {
                     </div>
                     <span class="chevron">▼</span>
                 </div>
-                <div class="user-folder-body" id="folder-${u.username}"></div>
+                <div class="user-folder-body" id="folder-${safeId}"></div>
             </div>
-        `).join('');
+        `}).join('');
 
     } catch (e) {
         container.innerHTML = `<div class="empty-state"><p>Errore caricamento.</p></div>`;
@@ -202,8 +213,8 @@ async function loadPrivateFolders() {
 
 // ── Toggle folder open/close ──────────────────────────────────────────────────
 
-async function toggleFolder(headerEl, username) {
-    const body = document.getElementById(`folder-${username}`);
+async function toggleFolder(headerEl, username, safeId) {
+    const body = document.getElementById(`folder-${safeId}`);
     const isOpen = body.classList.contains('open');
 
     headerEl.classList.toggle('open', !isOpen);
@@ -214,7 +225,8 @@ async function toggleFolder(headerEl, username) {
         body.innerHTML = `<div class="empty-folder">Caricamento...</div>`;
 
         try {
-            const res   = await fetch(`/api/admin/private/${username}`, { headers: Auth.headers() });
+            // Send original username to API via encodeURIComponent
+            const res   = await fetch(`/api/admin/private/${encodeURIComponent(username)}`, { headers: Auth.headers() });
             const files = await res.json();
 
             body.dataset.loaded = '1';
@@ -224,7 +236,7 @@ async function toggleFolder(headerEl, username) {
             body.innerHTML = '';
             body.appendChild(gridEl);
 
-            renderGrid(files, gridEl, `private_${username}`);
+            renderGrid(files, gridEl, `private_${safeId}`);
         } catch (e) {
             body.innerHTML = `<div class="empty-folder">Errore caricamento.</div>`;
         }
