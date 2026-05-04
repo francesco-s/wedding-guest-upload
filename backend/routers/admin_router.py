@@ -13,13 +13,17 @@ ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.mov'}
 VIDEO_EXTENSIONS   = {'.mp4', '.mov'}
 
 
-
 def _is_video(filename: str) -> bool:
     return os.path.splitext(filename)[1].lower() in VIDEO_EXTENSIONS
 
 
 def _is_thumb(filename: str) -> bool:
     return filename.startswith("thumb_")
+
+
+def _safe_username(username: str) -> str:
+    """Mirror media_router._safe(): strip non-alphanumeric chars, lowercase."""
+    return "".join(c for c in username if c.isalnum()).lower()
 
 
 def _parse_author(filename: str) -> str:
@@ -42,8 +46,8 @@ def _list_media_files(directory: str) -> list[str]:
 
 
 def _file_to_dict(filepath: str, base_url: str) -> dict:
-    filename  = os.path.basename(filepath)
-    stem      = os.path.splitext(filename)[0]
+    filename   = os.path.basename(filepath)
+    stem       = os.path.splitext(filename)[0]
     thumb_name = f"thumb_{stem}.jpg"
     thumb_path = os.path.join(os.path.dirname(filepath), thumb_name)
     return {
@@ -53,7 +57,6 @@ def _file_to_dict(filepath: str, base_url: str) -> dict:
         "author":    _parse_author(filename),
         "is_video":  _is_video(filename),
     }
-
 
 
 # ── Stats ──────────────────────────────────────────────────────────────────
@@ -85,7 +88,6 @@ def get_stats(admin=Depends(require_admin)):
     }
 
 
-
 # ── Public gallery ──────────────────────────────────────────────────────────
 
 
@@ -94,7 +96,6 @@ def get_public(admin=Depends(require_admin)):
     public_dir = os.path.join(UPLOAD_DIR, "public")
     files = sorted(_list_media_files(public_dir), reverse=True)
     return [_file_to_dict(os.path.join(public_dir, f), "/uploads/public") for f in files]
-
 
 
 # ── Users ───────────────────────────────────────────────────────────────────
@@ -114,12 +115,14 @@ def get_users(admin=Depends(require_admin)):
 
     users = []
     for (username,) in rows:
-        user_private_dir = os.path.join(private_dir, username)
+        safe_name = _safe_username(username)
+
+        user_private_dir = os.path.join(private_dir, safe_name)
         private_count = len(_list_media_files(user_private_dir))
 
         public_count = sum(
             1 for f in public_files
-            if _parse_author(f).lower() == username.lower()
+            if _parse_author(f).lower() == safe_name
         )
 
         users.append({
@@ -130,7 +133,6 @@ def get_users(admin=Depends(require_admin)):
         })
 
     return users
-
 
 
 # ── Delete user ──────────────────────────────────────────────────────────────
@@ -149,8 +151,10 @@ def delete_user(username: str, admin=Depends(require_admin)):
             raise HTTPException(404, "Utente non trovato.")
         conn.execute("DELETE FROM users WHERE username = ?", (username,))
 
+    safe_name = _safe_username(username)
+
     # Delete private folder (thumbs included via rmtree)
-    private_folder = os.path.join(UPLOAD_DIR, "private", username)
+    private_folder = os.path.join(UPLOAD_DIR, "private", safe_name)
     if os.path.exists(private_folder):
         shutil.rmtree(private_folder)
 
@@ -158,11 +162,10 @@ def delete_user(username: str, admin=Depends(require_admin)):
     public_dir = os.path.join(UPLOAD_DIR, "public")
     if os.path.exists(public_dir):
         for f in os.listdir(public_dir):
-            if _parse_author(f).lower() == username.lower():
+            if _parse_author(f).lower() == safe_name:
                 os.remove(os.path.join(public_dir, f))
 
     return {"ok": True, "deleted": username}
-
 
 
 # ── Private folder for one user ──────────────────────────────────────────────
@@ -170,12 +173,13 @@ def delete_user(username: str, admin=Depends(require_admin)):
 
 @router.get("/private/{username}")
 def get_private(username: str, admin=Depends(require_admin)):
-    user_dir = os.path.join(UPLOAD_DIR, "private", username)
-    files = sorted(_list_media_files(user_dir), reverse=True)
+    safe_name = _safe_username(username)
+    user_dir  = os.path.join(UPLOAD_DIR, "private", safe_name)
+    files     = sorted(_list_media_files(user_dir), reverse=True)
     return [
         _file_to_dict(
             os.path.join(user_dir, f),
-            f"/uploads/private/{username}"
+            f"/uploads/private/{safe_name}"
         )
         for f in files
     ]
