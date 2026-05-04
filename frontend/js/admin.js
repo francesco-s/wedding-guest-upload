@@ -1,5 +1,6 @@
 Auth.requireAdmin();
 
+
 // ── Lightbox ────────────────────────────────────────────────────────────────
 
 const AdminGallery = {
@@ -65,6 +66,7 @@ const AdminGallery = {
     }
 };
 
+
 // -- History handling for lightbox back button support --
 window.addEventListener('popstate', e => {
     if (document.getElementById('lightbox').classList.contains('active')) {
@@ -75,6 +77,7 @@ window.addEventListener('popstate', e => {
     }
 });
 
+
 // --- Keyboard navigation ---
 document.addEventListener('keydown', e => {
     if (!document.getElementById('lightbox').classList.contains('active')) return;
@@ -82,6 +85,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft')  AdminGallery.nav(-1);
     if (e.key === 'ArrowRight') AdminGallery.nav(1);
 });
+
 
 // --- Lazy loader ---
 function observeLazyImages(container) {
@@ -98,12 +102,22 @@ function observeLazyImages(container) {
     container.querySelectorAll('img.lazy').forEach(img => observer.observe(img));
 }
 
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-// Creates a safe DOM id from any string (removes spaces, quotes, etc)
 function safeDomId(str) {
     return str.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 }
+
+function escapeHtml(str) {
+    return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
 
 // ── Grid renderer ────────────────────────────────────────────────────────────
 
@@ -123,15 +137,16 @@ function renderGrid(files, gridEl, storeKey) {
                     <span class="video-play-icon">▶</span>
                 </div>
                 <span class="video-badge">▶ Video</span>`
-                : `<img data-src="${f.thumb_url || f.url}" alt="${f.filename}" class="lazy">`}
+                : `<img data-src="${f.thumb_url || f.url}" alt="${escapeHtml(f.filename)}" class="lazy">`}
             ${f.author
-                ? `<div class="author-badge">${f.author}</div>`
+                ? `<div class="author-badge">${escapeHtml(f.author)}</div>`
                 : ''}
         </div>
     `).join('');
 
     observeLazyImages(gridEl);
 }
+
 
 // ── Stats ────────────────────────────────────────────────────────────────────
 
@@ -146,6 +161,7 @@ async function loadStats() {
         console.error('Stats error:', e);
     }
 }
+
 
 // ── Public gallery ────────────────────────────────────────────────────────────
 
@@ -163,17 +179,16 @@ async function loadPublicGallery() {
     }
 }
 
+
 // ── Private folders ───────────────────────────────────────────────────────────
 
 async function loadPrivateFolders() {
     const container = document.getElementById('private-folders');
 
     try {
-        // Returns: [{username, public_count, private_count, total}, ...]
         const res   = await fetch('/api/admin/users', { headers: Auth.headers() });
         const users = await res.json();
 
-        // Only show users who have at least 1 private file
         const usersWithPrivate = users.filter(u => u.private_count > 0);
 
         document.getElementById('private-count').textContent = usersWithPrivate.length;
@@ -187,46 +202,62 @@ async function loadPrivateFolders() {
             return;
         }
 
-        // We escape the string using single quotes and use safeDomId for the element ID
-        container.innerHTML = usersWithPrivate.map(u => {
+        container.innerHTML = '';
+
+        usersWithPrivate.forEach(u => {
             const safeId = safeDomId(u.username);
-            // Replace single quotes with escaped quotes so it doesn't break the onclick handler
-            const escapedUsername = u.username.replace(/'/g, "\\'");
-            return `
-            <div class="user-folder">
-                <div class="user-folder-header" onclick="toggleFolder(this, '${escapedUsername}', '${safeId}')">
-                    <div class="folder-info">
-                        <span>📁</span>
-                        <span>${u.username}</span>
-                        <span class="file-count">${u.private_count} file</span>
-                    </div>
-                    <span class="chevron">▼</span>
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'user-folder';
+
+            const header = document.createElement('div');
+            header.className = 'user-folder-header';
+
+            header.innerHTML = `
+                <div class="folder-info">
+                    <span>📁</span>
+                    <span>${escapeHtml(u.username)}</span>
+                    <span class="file-count">${u.private_count} file</span>
                 </div>
-                <div class="user-folder-body" id="folder-${safeId}"></div>
-            </div>
-        `}).join('');
+                <span class="chevron">▼</span>
+            `;
+
+            const body = document.createElement('div');
+            body.className = 'user-folder-body';
+            body.id = `folder-${safeId}`;
+
+            header.addEventListener('click', () => toggleFolder(header, u.username, safeId));
+
+            wrapper.appendChild(header);
+            wrapper.appendChild(body);
+            container.appendChild(wrapper);
+        });
 
     } catch (e) {
         container.innerHTML = `<div class="empty-state"><p>Errore caricamento.</p></div>`;
     }
 }
 
+
 // ── Toggle folder open/close ──────────────────────────────────────────────────
 
 async function toggleFolder(headerEl, username, safeId) {
     const body = document.getElementById(`folder-${safeId}`);
+    if (!body) return;
+
     const isOpen = body.classList.contains('open');
 
     headerEl.classList.toggle('open', !isOpen);
     body.classList.toggle('open', !isOpen);
 
-    // Load files only on first open
     if (!isOpen && !body.dataset.loaded) {
         body.innerHTML = `<div class="empty-folder">Caricamento...</div>`;
 
         try {
-            // Send original username to API via encodeURIComponent
-            const res   = await fetch(`/api/admin/private/${encodeURIComponent(username)}`, { headers: Auth.headers() });
+            const res = await fetch(
+                `/api/admin/private/${encodeURIComponent(username)}`,
+                { headers: Auth.headers() }
+            );
             const files = await res.json();
 
             body.dataset.loaded = '1';
@@ -242,6 +273,7 @@ async function toggleFolder(headerEl, username, safeId) {
         }
     }
 }
+
 
 (function initInteractions() {
     const lb      = document.getElementById('lightbox');
@@ -283,7 +315,9 @@ async function toggleFolder(headerEl, username, safeId) {
     }
 
     function resetTransform(el) {
-        scale = 1; translateX = 0; translateY = 0;
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
         el.style.transition = 'transform 0.25s ease';
         el.style.transform  = '';
     }
@@ -292,20 +326,16 @@ async function toggleFolder(headerEl, username, safeId) {
         return lbMedia.querySelector('img, video');
     }
 
-    // ── Reset on slide change ──────────────────────────────────────────────
-    // Call this whenever a new slide is rendered
     window._resetLightboxZoom = () => {
         const el = getMedia();
         if (el) resetTransform(el);
     };
 
-    // ── Touch Start ────────────────────────────────────────────────────────
     lb.addEventListener('touchstart', e => {
         if (e.touches.length === 2) {
-            // Start pinch
             isPinching      = true;
             isSwiping       = false;
-            isPanning        = false;
+            isPanning       = false;
             initialDistance = getDistance(e.touches);
             lastScale       = scale;
             e.preventDefault();
@@ -314,7 +344,6 @@ async function toggleFolder(headerEl, username, safeId) {
             if (e.target.closest('video')) return;
 
             if (scale > 1) {
-                // Start pan
                 isPanning  = true;
                 isSwiping  = false;
                 panStartX  = touch.clientX;
@@ -322,7 +351,6 @@ async function toggleFolder(headerEl, username, safeId) {
                 panOriginX = translateX;
                 panOriginY = translateY;
             } else {
-                // Start swipe
                 isSwiping   = true;
                 isPanning   = false;
                 swipeStartX = touch.clientX;
@@ -331,7 +359,6 @@ async function toggleFolder(headerEl, username, safeId) {
         }
     }, { passive: false });
 
-    // ── Touch Move ─────────────────────────────────────────────────────────
     lb.addEventListener('touchmove', e => {
         if (isPinching && e.touches.length === 2) {
             e.preventDefault();
@@ -356,7 +383,6 @@ async function toggleFolder(headerEl, username, safeId) {
         }
     }, { passive: false });
 
-    // ── Touch End ──────────────────────────────────────────────────────────
     lb.addEventListener('touchend', e => {
         if (isPinching) {
             isPinching = false;
@@ -379,7 +405,6 @@ async function toggleFolder(headerEl, username, safeId) {
         }
     }, { passive: true });
 
-    // ── Double tap to reset ────────────────────────────────────────────────
     let lastTap = 0;
     lb.addEventListener('touchend', e => {
         if (e.touches.length > 0) return;
@@ -391,6 +416,7 @@ async function toggleFolder(headerEl, username, safeId) {
         lastTap = now;
     }, { passive: true });
 })();
+
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
