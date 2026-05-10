@@ -1,8 +1,8 @@
 // --- Token & Session Helpers ---
 const Auth = {
-    token: localStorage.getItem('token'),
-    username: localStorage.getItem('username'),
-    isAdmin: localStorage.getItem('is_admin') === 'true',
+    get token() { return localStorage.getItem('token'); },
+    get username() { return localStorage.getItem('username'); },
+    get isAdmin() { return localStorage.getItem('is_admin') === 'true'; },
 
     headers() {
         return {
@@ -33,5 +33,14 @@ const Auth = {
             window.location.href = '/';
             throw new Error('Unauthorized');
         }
+    },
+    
+    async fetchWithAuth(url, options = {}) {
+        options.headers = { ...this.headers(), ...options.headers };
+        const res = await fetch(url, options);
+        if (res.status === 401 || res.status === 403) {
+            this.logout(); // Redirects to login if token is expired/invalid
+        }
+        return res;
     }
 };

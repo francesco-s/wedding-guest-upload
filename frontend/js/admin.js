@@ -1,6 +1,5 @@
 Auth.requireAdmin();
 
-
 // ── Lightbox ────────────────────────────────────────────────────────────────
 
 const AdminGallery = {
@@ -66,7 +65,6 @@ const AdminGallery = {
     }
 };
 
-
 // -- History handling for lightbox back button support --
 window.addEventListener('popstate', e => {
     if (document.getElementById('lightbox').classList.contains('active')) {
@@ -77,7 +75,6 @@ window.addEventListener('popstate', e => {
     }
 });
 
-
 // --- Keyboard navigation ---
 document.addEventListener('keydown', e => {
     if (!document.getElementById('lightbox').classList.contains('active')) return;
@@ -85,7 +82,6 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft')  AdminGallery.nav(-1);
     if (e.key === 'ArrowRight') AdminGallery.nav(1);
 });
-
 
 // --- Lazy loader ---
 function observeLazyImages(container) {
@@ -102,7 +98,6 @@ function observeLazyImages(container) {
     container.querySelectorAll('img.lazy').forEach(img => observer.observe(img));
 }
 
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function safeDomId(str) {
@@ -117,7 +112,6 @@ function escapeHtml(str) {
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
 }
-
 
 // ── Grid renderer ────────────────────────────────────────────────────────────
 
@@ -147,12 +141,11 @@ function renderGrid(files, gridEl, storeKey) {
     observeLazyImages(gridEl);
 }
 
-
 // ── Stats ────────────────────────────────────────────────────────────────────
 
 async function loadStats() {
     try {
-        const res  = await fetch('/api/admin/stats', { headers: Auth.headers() });
+        const res  = await Auth.fetchWithAuth('/api/admin/stats');
         const data = await res.json();
         document.getElementById('stat-public').textContent  = data.public  ?? '—';
         document.getElementById('stat-users').textContent   = data.users   ?? '—';
@@ -162,14 +155,13 @@ async function loadStats() {
     }
 }
 
-
 // ── Public gallery ────────────────────────────────────────────────────────────
 
 async function loadPublicGallery() {
     const grid = document.getElementById('admin-public-grid');
 
     try {
-        const res   = await fetch('/api/admin/public', { headers: Auth.headers() });
+        const res   = await Auth.fetchWithAuth('/api/admin/public');
         const files = await res.json();
 
         document.getElementById('public-count').textContent = files.length;
@@ -179,14 +171,13 @@ async function loadPublicGallery() {
     }
 }
 
-
 // ── Private folders ───────────────────────────────────────────────────────────
 
 async function loadPrivateFolders() {
     const container = document.getElementById('private-folders');
 
     try {
-        const res   = await fetch('/api/admin/users', { headers: Auth.headers() });
+        const res   = await Auth.fetchWithAuth('/api/admin/users');
         const users = await res.json();
 
         const usersWithPrivate = users.filter(u => u.private_count > 0);
@@ -238,7 +229,6 @@ async function loadPrivateFolders() {
     }
 }
 
-
 // ── Toggle folder open/close ──────────────────────────────────────────────────
 
 async function toggleFolder(headerEl, username, safeId) {
@@ -254,10 +244,7 @@ async function toggleFolder(headerEl, username, safeId) {
         body.innerHTML = `<div class="empty-folder">Caricamento...</div>`;
 
         try {
-            const res = await fetch(
-                `/api/admin/private/${encodeURIComponent(username)}`,
-                { headers: Auth.headers() }
-            );
+            const res = await Auth.fetchWithAuth(`/api/admin/private/${encodeURIComponent(username)}`);
             const files = await res.json();
 
             body.dataset.loaded = '1';
@@ -273,7 +260,6 @@ async function toggleFolder(headerEl, username, safeId) {
         }
     }
 }
-
 
 (function initInteractions() {
     const lb      = document.getElementById('lightbox');
@@ -416,7 +402,6 @@ async function toggleFolder(headerEl, username, safeId) {
         lastTap = now;
     }, { passive: true });
 })();
-
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 

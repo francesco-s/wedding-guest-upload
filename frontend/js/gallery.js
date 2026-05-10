@@ -52,35 +52,39 @@ async function loadGallery() {
     const grid = document.getElementById('gallery-grid');
     grid.innerHTML = `<div class="empty-state"><div class="icon">⏳</div><p>Caricamento...</p></div>`;
 
-    const res   = await fetch('/api/media/public', { headers: Auth.authHeaders() });
-    const files = await res.json();
-    currentFiles = files;
+    try {
+        const res   = await Auth.fetchWithAuth('/api/media/public', { headers: Auth.authHeaders() });
+        const files = await res.json();
+        currentFiles = files;
 
-    document.getElementById('gallery-count').textContent =
-        `${files.length} ${files.length === 1 ? 'foto' : 'foto'}`;
+        document.getElementById('gallery-count').textContent =
+            `${files.length} ${files.length === 1 ? 'foto' : 'foto'}`;
 
-    if (!files.length) {
-        grid.innerHTML = `
-            <div class="empty-state">
-                <div class="icon">📷</div>
-                <p>Nessuna foto ancora.<br>Sii il primo!</p>
-            </div>`;
-        return;
+        if (!files.length) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">📷</div>
+                    <p>Nessuna foto ancora.<br>Sii il primo!</p>
+                </div>`;
+            return;
+        }
+
+        grid.innerHTML = files.map((f, i) => `
+            <div class="gallery-item" onclick="openLightbox(${i})">
+                ${f.is_video
+                    ? `<div class="video-placeholder">
+                        <span class="video-play-icon">▶</span>
+                    </div>
+                    <span class="video-badge">▶ Video</span>`
+                    : `<img data-src="${f.thumb_url || f.url}" alt="${f.filename}" class="lazy">`}
+                ${f.author ? `<div class="author-badge">📸 ${f.author}</div>` : ''}
+            </div>
+        `).join('');
+
+        observeLazyImages(grid);
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state"><p>Errore di connessione.</p></div>`;
     }
-
-    grid.innerHTML = files.map((f, i) => `
-        <div class="gallery-item" onclick="openLightbox(${i})">
-            ${f.is_video
-                ? `<div class="video-placeholder">
-                    <span class="video-play-icon">▶</span>
-                </div>
-                <span class="video-badge">▶ Video</span>`
-                : `<img data-src="${f.thumb_url || f.url}" alt="${f.filename}" class="lazy">`}
-            ${f.author ? `<div class="author-badge">📸 ${f.author}</div>` : ''}
-        </div>
-    `).join('');
-
-    observeLazyImages(grid);
 }
 
 // --- Upload ---
@@ -102,7 +106,7 @@ async function uploadFiles() {
 
     try {
         fill.style.width = '60%';
-        const res = await fetch('/api/media/upload', {
+        const res = await Auth.fetchWithAuth('/api/media/upload', {
             method: 'POST',
             headers: Auth.authHeaders(),
             body: formData
@@ -360,4 +364,3 @@ window.addEventListener('popstate', e => {
         document.getElementById('lightbox').classList.remove('active');
     }
 });
-
